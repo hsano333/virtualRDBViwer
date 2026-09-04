@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import { collapseConnections } from './erLayout.js'
+import { collapseConnections, recenterConnectedLines } from './erLayout.js'
 
 const HEADER_HEIGHT = 56
 const SPLITTER_HEIGHT = 8
@@ -55,6 +55,11 @@ function App() {
   const [dragging, setDragging] = useState(null)
 
   // リレーション（外部キー）の接続情報
+  const schemaTable = useMemo(
+    () => (schema ? schema.tables.find((t) => t.name === selectedTable) : null),
+    [schema, selectedTable]
+  )
+
   const fkEdges = useMemo(
     () =>
       schema
@@ -197,7 +202,8 @@ function App() {
   // テーブル幅の1.25以上の隙間を保つよう整列させる（collapseConnections）。
   const alignLayout = () => {
     if (!schema || !erGridRef.current) return
-    const next = collapseConnections(schema, positions, dimensions)
+    let next = collapseConnections(schema, positions, dimensions)
+    next = recenterConnectedLines(schema, next, dimensions)
     setPositions(next)
   }
 
@@ -318,9 +324,19 @@ function App() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    {table.headers.map((h, i) => (
-                      <th key={i}>{h}</th>
-                    ))}
+                    {table.headers.map((h, i) => {
+                      const kind = schemaTable ? getColumnKind(schemaTable, h) : null
+                      return (
+                        <th key={i} className="table-header-col">
+                          {kind && (
+                            <span className={`table-badge table-badge-${kind}`}>
+                              {kind === 'pk' ? 'PK' : 'FK'}
+                            </span>
+                          )}
+                          <span className="table-header-name">{h}</span>
+                        </th>
+                      )
+                    })}
                   </tr>
                 </thead>
                 <tbody>

@@ -122,11 +122,12 @@ export function alignTables(schema, positions, dimensions, { step = 48 } = {}) {
 
 // 線（外部キー）でつながっている隣接テーブル同士を整理する整列処理。
 //
-// 横方向（x 軸）は、線でつながっている2テーブルの間に「テーブル幅の1.25倍
+// 横方向（x 軸）は、線でつながっている2テーブルの間に「テーブル幅の0.7倍
 // 以上の隙間」を保つ。隙間がそれ未満（重なっている含む）なら、相手を避け
 // て離す。離先先に重なり（noOverlapWithOthers）が無ければ実際に動かす。
 //
-// 縦方向（y 軸）はこれまでどおり、中心間距離の半分だけ近づけて整列させる。
+// 縦方向（y 軸）は、線でつながっている2テーブルの間に「テーブル高さの0.5倍
+// 以上の隙間」を保つ。横方向（x 軸）と同じ方針で、隙間が未満なら相手から離す。
 //
 // 各テーブルは「動かす片方」として扱い、隣接するすべてのテーブルに対して
 // 試行する。どれか1つでもテーブルが動き（移動量が eps 以上）えば次の
@@ -181,7 +182,7 @@ export function collapseConnections(schema, positions, dimensions, { eps = 1 } =
         const w1 = w(name)
         const w2 = w(target)
         const avgW = (w1 + w2) / 2
-        const gapTarget = 1.25 * avgW
+        const gapTarget = 0.7 * avgW
         const reach = gapTarget + (w1 + w2) / 2
         const d = bcx - acx
         if (Math.abs(d) < reach) {
@@ -196,13 +197,23 @@ export function collapseConnections(schema, positions, dimensions, { eps = 1 } =
           }
         }
 
-        // y 軸も同様に半分にする
-        const stepY = (bcy - acy) / 2
-        if (Math.abs(stepY) >= eps) {
-          const moved = moveToAxis(name, 'y', cur.y + stepY, result)
-          if (noOverlapWithOthers(name, moved, dimensions)) {
-            result = moved
-            movedAny = true
+        // 縦方向: 線でつながっているテーブル間に、テーブル高さの0.5倍以上の
+        // 隙間を保つ。隙間が未満なら相手から離して整列させる。
+        const h1 = h(name)
+        const h2 = h(target)
+        const avgH = (h1 + h2) / 2
+        const gapTargetV = 0.5 * avgH
+        const reachV = gapTargetV + (h1 + h2) / 2
+        const dy = bcy - acy
+        if (Math.abs(dy) < reachV) {
+          const targetCenter = Math.sign(dy) * reachV || reachV
+          const stepY = dy - targetCenter
+          if (Math.abs(stepY) >= eps) {
+            const moved = moveToAxis(name, 'y', cur.y + stepY, result)
+            if (noOverlapWithOthers(name, moved, dimensions)) {
+              result = moved
+              movedAny = true
+            }
           }
         }
       }
@@ -223,6 +234,93 @@ export function collapseConnections(schema, positions, dimensions, { eps = 1 } =
       x: result[name].x - minX + PAD,
       y: result[name].y - minY + PAD,
     }
+  }
+
+  return result
+}
+
+// 整列処理（その2）：外部キー（線）でつながっているテーブルを、接続線の中点
+// （＝線の長さを半分にした座標）へ引き寄せ整列させる。
+//
+// 各テーブルについて、隣接テーブルとの接続線中点を軸方向ごとに求め（複数接続なら
+// その平均）、その座標へ動かす。ただし移動先で他のテーブルと重なり始めたら
+// （nodesOverlap が成立する）場合は配置せず、重ならない範囲で留める。x 軸・y 軸の
+// 両方で行う。
+//
+// 移動は「他のテーブルと重ならない（＝対象テーブル×他のテーブルで nodesOverlap が
+// すべて False）」ことを条件に配置するため、繰り返せば繰り返すほど接続テーブルを
+// 重ならない範囲で近付ける。全テーブルが重ならない状態で終了する。元の positions
+// は変更せず、新しい positions を返す。passes の既定値は第4引数で変更できる。
+export function recenterConnectedLines(schema, positions, dimensions, { passes = 64 } = {}) {
+  const names = schema ? schema.tables.map((t) => t.name) : []
+  const w = (name) => dimensions[name]?.w ?? 240
+  const h = (name) => dimensions[name]?.h ?? 160
+
+  // 各テーブルの隣接リスト（双方向）を構築
+  const neighbors = {}
+  names.forEach((name) => {
+    neighbors[name] = []
+  })
+  schema.tables.forEach((from) => {
+    ;(from.foreignKeys || []).forEach((fk) => {
+      const target = fk.referencesTable
+      if (target && !neighbors[from.name].includes(target)) {
+        neighbors[from.name].push(target)
+      }
+      if (!neighbors[target].includes(from.name)) {
+        neighbors[target].push(from.name)
+      }
+    })
+  })
+
+  let result = { ...positions }
+
+  for (let pass = 0; pass < passes; pass++) {
+    let movedAny = false
+
+    for (const name of names) {
+      const nbrs = neighbors[name]
+      if (!nbrs.length) continue
+
+      // 現在座標（中心）
+      const cur = result[name]
+      const cx = cur.x + w(name) / 2
+      const cy = cur.y + h(name) / 2
+
+      // 各接続線の中点を軸ごとに平均する（単一接続ならその中点、複数なら平均）
+      let mx = 0
+      let my = 0
+      let count = 0
+      for (const other of nbrs) {
+        const o = result[other]
+        if (!o) continue
+        mx += (cx + (o.x + w(other) / 2)) / 2
+        my += (cy + (o.y + h(other) / 2)) / 2
+        count++
+      }
+      if (count === 0) continue
+      mx /= count
+      my /= count
+
+      // x 軸方向：中点へずらし、他のテーブルと重ならないように配置する
+      const movedX = moveToAxis(name, 'x', mx - w(name) / 2, result)
+      if (noOverlapWithOthers(name, movedX, dimensions)) {
+        result = movedX
+        movedAny = true
+      }
+
+      // y 軸方向：同じく中点へずらし、他のテーブルと重ならないように配置する
+      const movedY = moveToAxis(name, 'y', my - h(name) / 2, result)
+      if (noOverlapWithOthers(name, movedY, dimensions)) {
+        result = movedY
+        movedAny = true
+      }
+    }
+
+    // 少しでも移動があれば次のパスへ。移動がなければ収束。
+    if (!movedAny) break
+    // 全テーブルが他のテーブルと重ならない状態（全 nodesOverlap がすべて False）で終了
+    if (names.every((n) => noOverlapWithOthers(n, result, dimensions))) break
   }
 
   return result
