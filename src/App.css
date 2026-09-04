@@ -151,6 +151,36 @@
   font-weight: 600;
   color: var(--text-h);
   border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.data-table-col {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.table-badge {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  line-height: 1;
+  color: #fff;
+  border-radius: 4px;
+  padding: 3px 4px;
+}
+
+.table-badge-pk {
+  background: var(--accent);
+}
+
+.table-badge-fk {
+  background: var(--text);
+}
+
+.table-header-name {
+  flex: 1 1 auto;
 }
 
 .data-table tbody tr:nth-child(odd) {
