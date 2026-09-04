@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import { computeERLayout } from './erLayout.js'
+import { collapseConnections } from './erLayout.js'
 
 const HEADER_HEIGHT = 56
 const SPLITTER_HEIGHT = 8
@@ -193,14 +193,11 @@ function App() {
     document.body.style.userSelect = 'none'
   }
 
-  // 「整列」ボタン：力指向シミュレーションでテーブルを再配置する。
-  // 重なりを抑え、リレーションに沿らせて隣接テーブルを近い距離に整える。
+  // 「整列」ボタン：線（外部キー）でつながっている隣接テーブル同士を、
+  // 重ならない範囲でつける整列（collapseConnections）。
   const alignLayout = () => {
     if (!schema || !erGridRef.current) return
-    const rect = erGridRef.current.getBoundingClientRect()
-    const cx = rect.width / 2
-    const cy = rect.height / 2
-    const next = computeERLayout(schema, dimensions, cx, cy, positions, { shorten: true })
+    const next = collapseConnections(schema, positions, dimensions)
     setPositions(next)
   }
 

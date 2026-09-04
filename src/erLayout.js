@@ -79,7 +79,7 @@ export function moveToAxis(name, axis, target, positions) {
 // step の既定値は第4引数で変更できる。
 export function alignTables(schema, positions, dimensions, { step = 48 } = {}) {
   const names = schema ? schema.tables.map((t) => t.name) : []
-  const result = { ...positions }
+  let result = { ...positions }
 
   let movedAny = true
   let curStep = step
@@ -115,6 +115,88 @@ export function alignTables(schema, positions, dimensions, { step = 48 } = {}) {
 
     if (!movedAny) break
     curStep = Math.round(curStep / 2)
+  }
+
+  return result
+}
+
+// 線（外部キー）でつながっている隣接テーブル同士を、重ならない範囲で
+// づける整列処理。隣接テーブルを、重ならない範囲で近づける。
+//
+// 2つのテーブルを結ぶ線を、軸沿着って半分になるよう縮める。動く片方の
+// テーブルを、もう片方に対して「中心間の距離の半分」だけずらし、ずらした
+// 先に重なり（noOverlapWithOthers）が無ければ実際に動かす。x 軸・y 軸の
+// 両方でこれを行い、全テーブルについて繰り返す。
+//
+// 各テーブルは「動かす片方」として扱い、隣接するすべてのテーブルに対して
+// 試行する。どれか1つでもテーブルが動き（移動量が eps 以上）えば次の
+// ループへ、どれもおかしく動かなければ（収束すれば）終了する。
+//
+// 元の positions はせず、新しい positions を返す。
+// eps 以下の移動は「動かなかった」とみなし、無限ループを避ける。
+export function collapseConnections(schema, positions, dimensions, { eps = 1 } = {}) {
+  const names = schema ? schema.tables.map((t) => t.name) : []
+  const w = (name) => dimensions[name]?.w ?? 240
+  const h = (name) => dimensions[name]?.h ?? 160
+
+  // 各テーブルにつながっている他テーブルのリスト（双方向）を構築
+  const neighbors = {}
+  names.forEach((name) => {
+    neighbors[name] = []
+  })
+  schema.tables.forEach((from) => {
+    ;(from.foreignKeys || []).forEach((fk) => {
+      const target = fk.referencesTable
+      if (target && !neighbors[from.name].includes(target)) {
+        neighbors[from.name].push(target)
+      }
+      if (!neighbors[target].includes(from.name)) {
+        neighbors[target].push(from.name)
+      }
+    })
+  })
+
+  let result = { ...positions }
+
+  let movedAny = true
+  while (movedAny) {
+    movedAny = false
+
+    for (const name of names) {
+      // 各 neighboring について、現在の座標で再度読み直す（前回の移動を反映）
+      for (const target of neighbors[name]) {
+        const cur = result[name]
+        if (!cur) continue
+        const t = result[target]
+        if (!t) continue
+
+        // 両テーブルの中心座標
+        const acx = cur.x + w(name) / 2
+        const acy = cur.y + h(name) / 2
+        const bcx = t.x + w(target) / 2
+        const bcy = t.y + h(target) / 2
+
+        // x 軸を半分にする（中心間の距離の半分だけ、相手へずらす）
+        const stepX = (bcx - acx) / 2
+        if (Math.abs(stepX) >= eps) {
+          const moved = moveToAxis(name, 'x', cur.x + stepX, result)
+          if (noOverlapWithOthers(name, moved, dimensions)) {
+            result = moved
+            movedAny = true
+          }
+        }
+
+        // y 軸も同様に半分にする
+        const stepY = (bcy - acy) / 2
+        if (Math.abs(stepY) >= eps) {
+          const moved = moveToAxis(name, 'y', cur.y + stepY, result)
+          if (noOverlapWithOthers(name, moved, dimensions)) {
+            result = moved
+            movedAny = true
+          }
+        }
+      }
+    }
   }
 
   return result
@@ -328,4 +410,13 @@ export function computeERLayout(schema, dimensions, cx, cy, initPositions = null
     }
   }
   return result
+}
+
+// 外部キー（foreignKeys）を持つテーブルをすべて取得して配列として返す。
+// 外部キーを持たないテーブル（foreignKeys が空配列、または未定義）は除外する。
+// 返す配列は schema.tables と同じ順序を保つ。
+// schema が未指定・不正な場合は防御的に空の配列を返す。
+export function getTablesWithForeignKeys(schema) {
+  if (!schema || !Array.isArray(schema.tables)) return []
+  return schema.tables.filter((t) => (t.foreignKeys || []).length > 0)
 }
