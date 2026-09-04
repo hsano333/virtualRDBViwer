@@ -27,6 +27,99 @@ function nodesOverlap(a, b, w, h) {
   )
 }
 
+// 矩形の重なり（AABB）を判定する。辺が接するだけ（一致）は重なりとしない。
+function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+  const overlapX = ax < bx + bw && ax + aw > bx
+  const overlapY = ay < by + bh && ay + ah > by
+  return overlapX && overlapY
+}
+
+// あるテーブルカードを動かしたとき、他のテーブルと重なっているか判定する。
+// positions は { name: { x, y } }（各カードの左上座標）、dimensions は { name: { w, h } }。
+// `name` のカードが他のどれかと1つ重なれば false、一つも重なっていれば true を返す。
+export function noOverlapWithOthers(name, positions, dimensions) {
+  const a = positions[name]
+  if (!a) return true
+  const aw = dimensions[name]?.w ?? 240
+  const ah = dimensions[name]?.h ?? 160
+  for (const other in positions) {
+    if (other === name) continue
+    const b = positions[other]
+    if (!b) continue
+    const bw = dimensions[other]?.w ?? 240
+    const bh = dimensions[other]?.h ?? 160
+    if (rectsOverlap(a.x, a.y, aw, ah, b.x, b.y, bw, bh)) return false
+  }
+  return true
+}
+
+// 指定したテーブルを、軸（x軸またはy軸）に沿って指定座標に移動する。
+// axis に 'x' を指定すると横座標、'y' を指定すると縦座標が target に変わる。
+// 選ばれなかった軸の座標は変化せず、新しい positions を返す（元オブジェクトは変更しない）。
+// axis が 'x'/'y' 以外なら positions をそのまま返す。
+export function moveToAxis(name, axis, target, positions) {
+  const pos = positions[name]
+  if (!pos) return positions
+  if (axis === 'x') {
+    return { ...positions, [name]: { x: target, y: pos.y } }
+  }
+  if (axis === 'y') {
+    return { ...positions, [name]: { x: pos.x, y: target } }
+  }
+  return positions
+}
+
+// 整列処理：線がつながっている2つのテーブル（の端点＝全テーブル）を、
+// x/y 軸に沿って少しずつずらし、ずらした先に重なり（noOverlapWithOthers）が
+// 無ければ実際に動かす。x 軸・y 軸の両方でこれを行い、全テーブルを
+// 「1度も動かなくなった」まで繰り返す。繰り返すごとに移動量 step を半分にし、
+// 小さく微調整しながら収束させる。
+// 重なっていないテーブルは動かさない（動かすと終了点がなくなるため）。
+// 元の positions は変更せず、新しい positions を返す。
+// step の既定値は第4引数で変更できる。
+export function alignTables(schema, positions, dimensions, { step = 48 } = {}) {
+  const names = schema ? schema.tables.map((t) => t.name) : []
+  const result = { ...positions }
+
+  let movedAny = true
+  let curStep = step
+  while (curStep >= 1) {
+    movedAny = false
+
+    for (const name of names) {
+      // 今重なっていないテーブルはスkip（終点がなくなるため）。
+      if (noOverlapWithOthers(name, result, dimensions)) continue
+      const cur = result[name]
+      if (!cur) continue
+
+      // x 軸方向に ±step ずつ動かす。重なりが解消できれば確定する。
+      for (const sign of [-1, 1]) {
+        const moved = moveToAxis(name, 'x', cur.x + sign * curStep, result)
+        if (noOverlapWithOthers(name, moved, dimensions)) {
+          result = moved
+          movedAny = true
+          break
+        }
+      }
+
+      // y 軸方向に ±step ずつ動かす。
+      for (const sign of [-1, 1]) {
+        const moved = moveToAxis(name, 'y', cur.y + sign * curStep, result)
+        if (noOverlapWithOthers(name, moved, dimensions)) {
+          result = moved
+          movedAny = true
+          break
+        }
+      }
+    }
+
+    if (!movedAny) break
+    curStep = Math.round(curStep / 2)
+  }
+
+  return result
+}
+
 // 位置関係（force レイアウト結果）を維持したまま辺を短くする整列。
 // 各ノードを隣接ノードへ引き寄せるが、移動が他のテーブルと重なり始めたら
 // そのノードを凍結（今後移動させない）。重なった片方だけを固定にし、
