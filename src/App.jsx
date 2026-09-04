@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 
 const HEADER_HEIGHT = 56
@@ -34,6 +34,7 @@ function getColumnKind(table, columnName) {
 
 function App() {
   const containerRef = useRef(null)
+  const erGridRef = useRef(null)
   const resizing = useRef(false)
   const [topHeight, setTopHeight] = useState(250)
   const [selectedTable, setSelectedTable] = useState(TABLES[0])
@@ -45,10 +46,28 @@ function App() {
 
   // ER図：各テーブルカードの配置・サイズ・ドラッグ状態
   const entityRefs = useRef({})
+  const columnRefs = useRef({})
   const [dimensions, setDimensions] = useState({})
   const [positions, setPositions] = useState({})
   const [containerHeight, setContainerHeight] = useState(0)
+  const [anchors, setAnchors] = useState({})
   const [dragging, setDragging] = useState(null)
+
+  // リレーション（外部キー）の接続情報
+  const fkEdges = useMemo(
+    () =>
+      schema
+        ? schema.tables.flatMap((from) =>
+            (from.foreignKeys || []).map((fk) => ({
+              from: from.name,
+              fromColumn: fk.columns[0],
+              to: fk.referencesTable,
+              toColumn: fk.referencesColumns[0],
+            }))
+          )
+        : [],
+    [schema]
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -173,6 +192,88 @@ function App() {
     document.body.style.userSelect = 'none'
   }
 
+  // 矩形の4辺の中心座標を返す
+  const sideCenters = (rect) => {
+    const cx = (rect.left + rect.right) / 2
+    const cy = (rect.top + rect.bottom) / 2
+    return {
+      left: { x: rect.left, y: cy },
+      right: { x: rect.right, y: cy },
+      top: { x: cx, y: rect.top },
+      bottom: { x: cx, y: rect.bottom },
+    }
+  }
+
+  const dist2 = (a, b) => {
+    const dx = a.x - b.x
+    const dy = a.y - b.y
+    return dx * dx + dy * dy
+  }
+
+  // 2点をエルボー（折れ線）で結ぶパスを生成する。丸みをつける。
+  const orthoPath = (sx, sy, tx, ty, r = 10) => {
+    const dx = tx - sx
+    const dy = ty - sy
+    const sX = dx === 0 ? 0 : Math.sign(dx)
+    const sY = dy === 0 ? 0 : Math.sign(dy)
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      return [
+        `M ${sx} ${sy}`,
+        `L ${tx - sX * r} ${sy}`,
+        `Q ${tx} ${sy} ${tx} ${sy + sY * r}`,
+        `L ${tx} ${ty}`,
+      ].join(' ')
+    }
+    return [
+      `M ${sx} ${sy}`,
+      `L ${sx} ${ty - sY * r}`,
+      `Q ${sx} ${ty} ${sx + sX * r} ${ty}`,
+      `L ${tx} ${ty}`,
+    ].join(' ')
+  }
+
+  // ドラッグ・レイアウト後に、接続点の座標を計測する
+  useEffect(() => {
+    if (!schema || !erGridRef.current) return
+    const gridRect = erGridRef.current.getBoundingClientRect()
+    const result = {}
+    fkEdges.forEach((edge) => {
+      const sEl = columnRefs.current[`${edge.from}.${edge.fromColumn}`]
+      const tEl = columnRefs.current[`${edge.to}.${edge.toColumn}`]
+      if (!sEl || !tEl) return
+      const s = sEl.getBoundingClientRect()
+      const t = tEl.getBoundingClientRect()
+      const sRect = {
+        left: s.left - gridRect.left,
+        top: s.top - gridRect.top,
+        right: s.right - gridRect.left,
+        bottom: s.bottom - gridRect.top,
+      }
+      const tRect = {
+        left: t.left - gridRect.left,
+        top: t.top - gridRect.top,
+        right: t.right - gridRect.left,
+        bottom: t.bottom - gridRect.top,
+      }
+      const sC = { x: (sRect.left + sRect.right) / 2, y: (sRect.top + sRect.bottom) / 2 }
+      const tC = { x: (tRect.left + tRect.right) / 2, y: (tRect.top + tRect.bottom) / 2 }
+      const sAnchor = Object.values(sideCenters(sRect)).reduce(
+        (best, p) => (dist2(p, tC) < dist2(best, tC) ? p : best)
+      )
+      const tAnchor = Object.values(sideCenters(tRect)).reduce(
+        (best, p) => (dist2(p, sC) < dist2(best, sC) ? p : best)
+      )
+      result[`${edge.from}.${edge.fromColumn}>>${edge.to}.${edge.toColumn}`] = {
+        path: orthoPath(sAnchor.x, sAnchor.y, tAnchor.x, tAnchor.y),
+        sx: sAnchor.x,
+        sy: sAnchor.y,
+        tx: tAnchor.x,
+        ty: tAnchor.y,
+      }
+    })
+    setAnchors(result)
+  }, [schema, positions, fkEdges])
+
   return (
     <div ref={containerRef} className="layout">
       <header className="header">
@@ -244,7 +345,32 @@ function App() {
             ) : !schema ? (
               <p className="table-loading">読み込み中…</p>
             ) : (
-              <div className="er-grid" style={{ height: containerHeight }}>
+              <div className="er-grid" style={{ height: containerHeight }} ref={erGridRef}>
+                <svg
+                  className="er-connections"
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    width: '100%',
+                    height: '100%',
+                    pointerEvents: 'none',
+                    zIndex: 0,
+                  }}
+                >
+                  {fkEdges.map((edge) => {
+                    const a = anchors[`${edge.from}.${edge.fromColumn}>>${edge.to}.${edge.toColumn}`]
+                    if (!a) return null
+                    return (
+                      <g key={edge.from + edge.fromColumn + edge.to + edge.toColumn}>
+                        <path d={a.path} className="er-connector" />
+                        <circle className="er-conn-dot" cx={a.sx} cy={a.sy} r={2.5} />
+                        <circle className="er-conn-dot" cx={a.tx} cy={a.ty} r={2.5} />
+                      </g>
+                    )
+                  })}
+                </svg>
                 {schema.tables.map((t) => (
                   <div
                     key={t.name}
@@ -273,7 +399,13 @@ function App() {
                       {t.columns.map((c) => {
                         const kind = getColumnKind(t, c.name)
                         return (
-                          <li key={c.name} className={`er-column ${kind ?? ''}`}>
+                          <li
+                            key={c.name}
+                            ref={(el) => {
+                              columnRefs.current[`${t.name}.${c.name}`] = el
+                            }}
+                            className={`er-column ${kind ?? ''}`}
+                          >
                             {kind && (
                               <span className={`er-badge er-badge-${kind}`}>
                                 {kind === 'pk' ? 'PK' : 'FK'}

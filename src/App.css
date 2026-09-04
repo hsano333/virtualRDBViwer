@@ -163,6 +163,22 @@
   min-height: 360px;
 }
 
+.er-connections {
+  overflow: visible;
+}
+
+.er-connector {
+  fill: none;
+  stroke: var(--accent-border);
+  stroke-width: 1.5;
+}
+
+.er-conn-dot {
+  fill: var(--bg);
+  stroke: var(--accent-border);
+  stroke-width: 1;
+}
+
 .er-entity {
   position: absolute;
   width: 240px;
