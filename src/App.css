@@ -159,21 +159,29 @@
 }
 
 .er-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
+  position: relative;
+  min-height: 360px;
 }
 
 .er-entity {
+  position: absolute;
   width: 240px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg);
   box-shadow: var(--shadow);
   overflow: hidden;
-  align-self: flex-start;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  cursor: grab;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.er-entity:active {
+  cursor: grabbing;
+}
+
+.er-entity.dragging {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  opacity: 0.92;
 }
 
 .er-entity:focus-visible {

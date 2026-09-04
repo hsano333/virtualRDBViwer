@@ -244,13 +244,17 @@ function App() {
             ) : !schema ? (
               <p className="table-loading">読み込み中…</p>
             ) : (
-              <div className="er-grid">
+              <div className="er-grid" style={{ height: containerHeight }}>
                 {schema.tables.map((t) => (
                   <div
                     key={t.name}
-                    className="er-entity"
+                    ref={(el) => {
+                      entityRefs.current[t.name] = el
+                    }}
+                    className={`er-entity ${dragging === t.name ? 'dragging' : ''}`}
                     role="button"
                     tabIndex={0}
+                    onMouseDown={(e) => startDrag(e, t.name)}
                     onClick={() => setSelectedTable(t.name)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -259,6 +263,10 @@ function App() {
                       }
                     }}
                     title={`${t.name} のデータを表示`}
+                    style={{
+                      left: positions[t.name]?.x ?? 0,
+                      top: positions[t.name]?.y ?? 0,
+                    }}
                   >
                     <div className="er-entity-title">{t.name}</div>
                     <ul className="er-columns">
