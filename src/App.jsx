@@ -193,8 +193,8 @@ function App() {
     document.body.style.userSelect = 'none'
   }
 
-  // 「整列」ボタン：線（外部キー）でつながっている隣接テーブル同士を、
-  // 重ならない範囲でつける整列（collapseConnections）。
+  // 「整列」ボタン：線（外部キー）でつながっているテーブル同士を、横方向に
+  // テーブル幅の1.25以上の隙間を保つよう整列させる（collapseConnections）。
   const alignLayout = () => {
     if (!schema || !erGridRef.current) return
     const next = collapseConnections(schema, positions, dimensions)

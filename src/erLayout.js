@@ -120,13 +120,13 @@ export function alignTables(schema, positions, dimensions, { step = 48 } = {}) {
   return result
 }
 
-// 線（外部キー）でつながっている隣接テーブル同士を、重ならない範囲で
-// づける整列処理。隣接テーブルを、重ならない範囲で近づける。
+// 線（外部キー）でつながっている隣接テーブル同士を整理する整列処理。
 //
-// 2つのテーブルを結ぶ線を、軸沿着って半分になるよう縮める。動く片方の
-// テーブルを、もう片方に対して「中心間の距離の半分」だけずらし、ずらした
-// 先に重なり（noOverlapWithOthers）が無ければ実際に動かす。x 軸・y 軸の
-// 両方でこれを行い、全テーブルについて繰り返す。
+// 横方向（x 軸）は、線でつながっている2テーブルの間に「テーブル幅の1.25倍
+// 以上の隙間」を保つ。隙間がそれ未満（重なっている含む）なら、相手を避け
+// て離す。離先先に重なり（noOverlapWithOthers）が無ければ実際に動かす。
+//
+// 縦方向（y 軸）はこれまでどおり、中心間距離の半分だけ近づけて整列させる。
 //
 // 各テーブルは「動かす片方」として扱い、隣接するすべてのテーブルに対して
 // 試行する。どれか1つでもテーブルが動き（移動量が eps 以上）えば次の
@@ -176,13 +176,23 @@ export function collapseConnections(schema, positions, dimensions, { eps = 1 } =
         const bcx = t.x + w(target) / 2
         const bcy = t.y + h(target) / 2
 
-        // x 軸を半分にする（中心間の距離の半分だけ、相手へずらす）
-        const stepX = (bcx - acx) / 2
-        if (Math.abs(stepX) >= eps) {
-          const moved = moveToAxis(name, 'x', cur.x + stepX, result)
-          if (noOverlapWithOthers(name, moved, dimensions)) {
-            result = moved
-            movedAny = true
+        // 横方向: 線でつながっているテーブル間に、テーブル幅の1.25倍以上の
+        // 隙間を保つ。隙間が未満なら相手から離して整列させる。
+        const w1 = w(name)
+        const w2 = w(target)
+        const avgW = (w1 + w2) / 2
+        const gapTarget = 1.25 * avgW
+        const reach = gapTarget + (w1 + w2) / 2
+        const d = bcx - acx
+        if (Math.abs(d) < reach) {
+          const targetCenter = Math.sign(d) * reach || reach
+          const stepX = d - targetCenter
+          if (Math.abs(stepX) >= eps) {
+            const moved = moveToAxis(name, 'x', cur.x + stepX, result)
+            if (noOverlapWithOthers(name, moved, dimensions)) {
+              result = moved
+              movedAny = true
+            }
           }
         }
 
@@ -196,6 +206,22 @@ export function collapseConnections(schema, positions, dimensions, { eps = 1 } =
           }
         }
       }
+    }
+  }
+
+  // 横方向に離した結果、左下負の座標へ外れるテーブルを避けるため全座標を
+  // 領域内（PAD）に合わせます。相対距離（隙間）は変わりません。
+  const PAD = 16
+  let minX = Infinity
+  let minY = Infinity
+  for (const name of names) {
+    minX = Math.min(minX, result[name].x)
+    minY = Math.min(minY, result[name].y)
+  }
+  for (const name of names) {
+    result[name] = {
+      x: result[name].x - minX + PAD,
+      y: result[name].y - minY + PAD,
     }
   }
 
