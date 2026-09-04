@@ -210,24 +210,18 @@ function App() {
     return dx * dx + dy * dy
   }
 
-  // 2点をエルボー（折れ線）で結ぶパスを生成する。丸みをつける。
+  // 2点を折れ線で結ぶパスを生成する。丸みをつける。
+  // 必ず最初に横に伸びてから縦へ折れ、最後に横に伸びて目標に届くエルボー。
   const orthoPath = (sx, sy, tx, ty, r = 10) => {
-    const dx = tx - sx
-    const dy = ty - sy
-    const sX = dx === 0 ? 0 : Math.sign(dx)
-    const sY = dy === 0 ? 0 : Math.sign(dy)
-    if (Math.abs(dx) >= Math.abs(dy)) {
-      return [
-        `M ${sx} ${sy}`,
-        `L ${tx - sX * r} ${sy}`,
-        `Q ${tx} ${sy} ${tx} ${sy + sY * r}`,
-        `L ${tx} ${ty}`,
-      ].join(' ')
-    }
+    const midX = (sx + tx) / 2
+    const sX = tx === sx ? 0 : Math.sign(tx - sx) // 横方向の進行方向
+    const sY = ty === sy ? 0 : Math.sign(ty - sy) // 縦方向の進行方向
     return [
       `M ${sx} ${sy}`,
-      `L ${sx} ${ty - sY * r}`,
-      `Q ${sx} ${ty} ${sx + sX * r} ${ty}`,
+      `L ${midX - sX * r} ${sy}`,
+      `Q ${midX} ${sy} ${midX} ${sy + sY * r}`,
+      `L ${midX} ${ty - sY * r}`,
+      `Q ${midX} ${ty} ${midX + sX * r} ${ty}`,
       `L ${tx} ${ty}`,
     ].join(' ')
   }
