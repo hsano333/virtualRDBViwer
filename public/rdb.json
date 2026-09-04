@@ -1,0 +1,198 @@
+{
+  "version": "1.0",
+  "description": "tablesディレクトリ内のCSVで表される各テーブルのRDBスキーマ情報。",
+  "tables": [
+    {
+      "name": "accounts",
+      "description": "会員（アカウント）情報の一覧。",
+      "primaryKey": ["id"],
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。会員ID。"
+        },
+        {
+          "name": "氏名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "会員の氏名。"
+        },
+        {
+          "name": "メールアドレス",
+          "type": "TEXT",
+          "nullable": false,
+          "unique": true,
+          "comment": "会員のメールアドレス。重複不可。"
+        },
+        {
+          "name": "年齢",
+          "type": "INTEGER",
+          "nullable": true,
+          "comment": "会員の年齢。"
+        },
+        {
+          "name": "電話番号",
+          "type": "TEXT",
+          "nullable": true,
+          "comment": "会員の電話番号。"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": [
+        {
+          "name": "idx_accounts_email",
+          "columns": ["メールアドレス"],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "categories",
+      "description": "商品の分類（区分）情報。",
+      "primaryKey": ["id"],
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。区分ID。"
+        },
+        {
+          "name": "区分名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "区分の名前。"
+        },
+        {
+          "name": "説明",
+          "type": "TEXT",
+          "nullable": true,
+          "comment": "区分の説明文。"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": []
+    },
+    {
+      "name": "orders",
+      "description": "注文情報。会員と商品の関連を持つ中間テーブル。",
+      "primaryKey": ["id"],
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。注文ID。"
+        },
+        {
+          "name": "アカウントID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "外部キー。accounts.id を参照。注文をした会員。"
+        },
+        {
+          "name": "商品ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "外部キー。products.id を参照。注文した商品。"
+        },
+        {
+          "name": "注文日",
+          "type": "DATE",
+          "nullable": false,
+          "comment": "注文の日付。"
+        },
+        {
+          "name": "数量",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "注文した商品数量。"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "fk_orders_account",
+          "columns": ["アカウントID"],
+          "referencesTable": "accounts",
+          "referencesColumns": ["id"],
+          "onDelete": "RESTRICT",
+          "onUpdate": "CASCADE"
+        },
+        {
+          "name": "fk_orders_product",
+          "columns": ["商品ID"],
+          "referencesTable": "products",
+          "referencesColumns": ["id"],
+          "onDelete": "RESTRICT",
+          "onUpdate": "CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_orders_account",
+          "columns": ["アカウントID"],
+          "unique": false
+        },
+        {
+          "name": "idx_orders_product",
+          "columns": ["商品ID"],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "products",
+      "description": "商品信息。区分IDでcategoriesを参照する。",
+      "primaryKey": ["id"],
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。商品ID。"
+        },
+        {
+          "name": "商品名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "商品名。"
+        },
+        {
+          "name": "区分",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "外部キー。categories.id を参照。商品の区分。"
+        },
+        {
+          "name": "価格",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "価格（円）。"
+        },
+        {
+          "name": "在庫",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "在庫数。"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "fk_products_category",
+          "columns": ["区分"],
+          "referencesTable": "categories",
+          "referencesColumns": ["id"],
+          "onDelete": "RESTRICT",
+          "onUpdate": "CASCADE"
+        }
+      ],
+      "indexes": []
+    }
+  ]
+}
