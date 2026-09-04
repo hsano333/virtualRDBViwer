@@ -29,6 +29,25 @@
   gap: 8px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.align-button {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.align-button:hover {
+  background: var(--accent-border, var(--accent));
+  border-color: var(--accent-border, var(--accent));
+  color: var(--bg);
+}
+
 .menu-item {
   font: inherit;
   font-size: 14px;

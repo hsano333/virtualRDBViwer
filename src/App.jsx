@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
+import { computeERLayout } from './erLayout.js'
 
 const HEADER_HEIGHT = 56
 const SPLITTER_HEIGHT = 8
@@ -192,6 +193,17 @@ function App() {
     document.body.style.userSelect = 'none'
   }
 
+  // 「整列」ボタン：力指向シミュレーションでテーブルを再配置する。
+  // 重なりを抑え、リレーションに沿らせて隣接テーブルを近い距離に整える。
+  const alignLayout = () => {
+    if (!schema || !erGridRef.current) return
+    const rect = erGridRef.current.getBoundingClientRect()
+    const cx = rect.width / 2
+    const cy = rect.height / 2
+    const next = computeERLayout(schema, dimensions, cx, cy, positions, { shorten: true })
+    setPositions(next)
+  }
+
   // 矩形の4辺の中心座標を返す
   const sideCenters = (rect) => {
     const cx = (rect.left + rect.right) / 2
@@ -272,11 +284,16 @@ function App() {
     <div ref={containerRef} className="layout">
       <header className="header">
         <h1 className="page-title">virtualRDBViwer</h1>
-        <nav className="menu" aria-label="メインメニュー">
-          <button type="button" className="menu-item">一覧</button>
-          <button type="button" className="menu-item">詳細</button>
-          <button type="button" className="menu-item">設定</button>
-        </nav>
+        <div className="header-actions">
+          <button type="button" className="menu-item align-button" onClick={alignLayout}>
+            整列
+          </button>
+          <nav className="menu" aria-label="メインメニュー">
+            <button type="button" className="menu-item">一覧</button>
+            <button type="button" className="menu-item">詳細</button>
+            <button type="button" className="menu-item">設定</button>
+          </nav>
+        </div>
       </header>
 
       <div className="main">
