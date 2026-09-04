@@ -188,7 +188,7 @@ function App() {
         <div className="panel top-panel" style={{ height: topHeight }}>
           <div className="panel-inner">
             <div className="panel-heading-row">
-              <h2 className="panel-heading">テーブル一覧</h2>
+              <h2 className="panel-heading">{selectedTable}</h2>
               <select
                 className="table-select"
                 value={selectedTable}
@@ -246,7 +246,20 @@ function App() {
             ) : (
               <div className="er-grid">
                 {schema.tables.map((t) => (
-                  <div key={t.name} className="er-entity">
+                  <div
+                    key={t.name}
+                    className="er-entity"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedTable(t.name)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setSelectedTable(t.name)
+                      }
+                    }}
+                    title={`${t.name} のデータを表示`}
+                  >
                     <div className="er-entity-title">{t.name}</div>
                     <ul className="er-columns">
                       {t.columns.map((c) => {
