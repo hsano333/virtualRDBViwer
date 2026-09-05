@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import { collapseConnections, recenterConnectedLines } from './erLayout.js'
+import { arrangeTables } from './erLayout.js'
 
 const HEADER_HEIGHT = 56
 const SPLITTER_HEIGHT = 8
@@ -198,13 +198,32 @@ function App() {
     document.body.style.userSelect = 'none'
   }
 
-  // 「整列」ボタン：線（外部キー）でつながっているテーブル同士を、横方向に
-  // テーブル幅の1.25以上の隙間を保つよう整列させる（collapseConnections）。
+  // ヘッダーのボタンで上面板の高さを切り替える
+  const availableHeight = () => {
+    if (!containerRef.current) return 0
+    return containerRef.current.getBoundingClientRect().height - HEADER_HEIGHT - SPLITTER_HEIGHT
+  }
+
+  const setTopHeightPercent = (ratio) => {
+    const available = availableHeight()
+    setTopHeight(Math.min(Math.max(MIN_PANEL, available * ratio), available - MIN_PANEL))
+  }
+
+  // 「テーブル」:上面板を最大まで広げる
+  const showTable = () => setTopHeightPercent(1)
+
+  // 「ER図」:下面板を最大まで広げる（上面板を最小）
+  const showER = () => setTopHeightPercent(0)
+
+  // 「画面分割」:約50%に分割
+  const splitView = () => setTopHeightPercent(0.5)
+
+  // 「整列」ボタン：外部キーの構造に従ってテーブルを再配置する。
+  // 外部キーが多いテーブルを起点に、参照対象を右へ（複数なら上下に）配置し、
+  // 重なりがあれば上下にずらしながらBFSで辿っていく。
   const alignLayout = () => {
-    if (!schema || !erGridRef.current) return
-    let next = collapseConnections(schema, positions, dimensions)
-    next = recenterConnectedLines(schema, next, dimensions)
-    setPositions(next)
+    if (!schema) return
+    setPositions(arrangeTables(schema, positions, dimensions))
   }
 
   // 矩形の4辺の中心座標を返す
@@ -288,6 +307,17 @@ function App() {
       <header className="header">
         <h1 className="page-title">virtualRDBViwer</h1>
         <div className="header-actions">
+          <div className="view-buttons">
+            <button type="button" className="menu-item view-btn" onClick={showTable}>
+              テーブル
+            </button>
+            <button type="button" className="menu-item view-btn" onClick={showER}>
+              ER図
+            </button>
+            <button type="button" className="menu-item view-btn" onClick={splitView}>
+              画面分割
+            </button>
+          </div>
           <button type="button" className="menu-item align-button" onClick={alignLayout}>
             整列
           </button>

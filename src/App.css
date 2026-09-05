@@ -35,6 +35,11 @@
   gap: 12px;
 }
 
+.view-buttons {
+  display: flex;
+  gap: 6px;
+}
+
 .align-button {
   background: var(--accent);
   border-color: var(--accent);

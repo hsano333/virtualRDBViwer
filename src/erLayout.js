@@ -536,6 +536,117 @@ export function computeERLayout(schema, dimensions, cx, cy, initPositions = null
   return result
 }
 
+// 外部キーのグラフ構造に従ってER図のテーブルを配置する。
+//
+//   1. 外部キーが一番多いテーブルを起点（ルート）として配置する。
+//   2. ルートが外部キーで参照する対象テーブルを、ルートの横（右）に配置する。
+//      対象が複数あれば上下に並べる。
+//   3. 既に配置済みのテーブルと重ねば、重ねないように上下にずらす。
+//   4. この作業を、配置済みのテーブルをキュー（BFS）で順に取りながら繰り返す。
+//      配置が終わったテーブルに印（placed）をつけ、全テーブルに印がついたら完了。
+//
+// 元の positions は使用せず、グラフ構造から座標を新たに計算して返す。
+export function arrangeTables(schema, positions, dimensions) {
+  const names = schema ? schema.tables.map((t) => t.name) : []
+  if (names.length === 0) return { ...positions }
+
+  const width = (name) => dimensions[name]?.w ?? 240
+  const height = (name) => dimensions[name]?.h ?? 160
+
+  // 各テーブルの外部キーが参照する対象テーブル（重複なし）
+  const targetsOf = {}
+  names.forEach((name) => {
+    targetsOf[name] = []
+  })
+  schema.tables.forEach((from) => {
+    ;(from.foreignKeys || []).forEach((fk) => {
+      const target = fk.referencesTable
+      if (target && !targetsOf[from.name].includes(target)) {
+        targetsOf[from.name].push(target)
+      }
+    })
+  })
+  const fkCount = {}
+  names.forEach((name) => {
+    fkCount[name] = targetsOf[name].length
+  })
+
+  const PAD = 16
+  const GAP_X = 72
+  const GAP_Y = 24
+
+  const result = {}
+  const placed = new Set()
+
+  // 配置済みのテーブルと矩形が重なるか（1px単位の検査）
+  function overlapsAt(x, y, name) {
+    for (const other of placed) {
+      const b = result[other]
+      if (
+        rectsOverlap(x, y, width(name), height(name), b.x, b.y, width(other), height(other))
+      ) {
+        return true
+      }
+    }
+    return false
+  }
+
+  // 位置を決定し、配置済みとして印をつける。重ならなくなるまで下にずらす。
+  function place(name, x, y) {
+    while (overlapsAt(x, y, name)) {
+      y += 1
+    }
+    result[name] = { x, y }
+    placed.add(name)
+  }
+
+  // 未配置のテーブルうち外部キーが最も多いものを選ぶ（次の起点）
+  function pickRoot() {
+    let best = null
+    for (const name of names) {
+      if (placed.has(name)) continue
+      if (best === null || fkCount[name] > fkCount[best]) best = name
+    }
+    return best
+  }
+
+  let root = pickRoot()
+  while (root !== null) {
+    place(root, PAD, PAD)
+    const queue = [root]
+    while (queue.length > 0) {
+      const parent = queue.shift()
+      const unplaced = targetsOf[parent].filter((t) => !placed.has(t))
+      if (unplaced.length === 0) continue
+
+      const baseX = result[parent].x + width(parent) + GAP_X
+
+      // 配置対象を複数のとき上下に並べる（親の垂直中央に揃える）
+      let stackHeight = 0
+      for (const t of unplaced) {
+        stackHeight += height(t)
+      }
+      stackHeight += GAP_Y * (unplaced.length - 1)
+      let y = result[parent].y + height(parent) / 2 - stackHeight / 2
+      if (y < PAD) y = PAD
+
+      for (const t of unplaced) {
+        let x = baseX
+        while (overlapsAt(x, y, t)) {
+          y += 1
+        }
+        result[t] = { x, y }
+        placed.add(t)
+        queue.push(t)
+        y += height(t) + GAP_Y
+      }
+    }
+    root = pickRoot()
+  }
+
+  return result
+}
+
 // 外部キー（foreignKeys）を持つテーブルをすべて取得して配列として返す。
 // 外部キーを持たないテーブル（foreignKeys が空配列、または未定義）は除外する。
 // 返す配列は schema.tables と同じ順序を保つ。
