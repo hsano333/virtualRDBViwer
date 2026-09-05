@@ -6,9 +6,10 @@ const HEADER_HEIGHT = 56
 const SPLITTER_HEIGHT = 8
 const MIN_PANEL = 8
 
-// tables ディレクトリにあるCSVファイル名（.csvは除く）
-const TABLES = ['accounts', 'categories', 'orders', 'products']
-const TABLE_PATH = (name) => `/tables/${name}.csv`
+// 各スキーマのテーブル名は schema.tables から取得するため、ハードコードしない
+
+// デフォルトで使用するスキーマID
+const DEFAULT_SCHEMA_ID = 'schema1'
 
 // ER図のカード配置定数
 const GRID_COLS = 2
@@ -48,12 +49,18 @@ function App() {
   const erGridRef = useRef(null)
   const resizing = useRef(false)
   const [topHeight, setTopHeight] = useState(250)
-  const [selectedTable, setSelectedTable] = useState(TABLES[0])
+  const [selectedTable, setSelectedTable] = useState('')
   const [table, setTable] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [schema, setSchema] = useState(null)
   const [schemaError, setSchemaError] = useState(null)
+
+  // 有効なスキーマ一覧と、現在選択中のスキーマ
+  const [schemaList, setSchemaList] = useState([])
+  const [selectedSchema, setSelectedSchema] = useState(DEFAULT_SCHEMA_ID)
+  const [schemaMenuOpen, setSchemaMenuOpen] = useState(false)
+  const schemaSelectorRef = useRef(null)
 
   // ER図：各テーブルカードの配置・サイズ・ドラッグ状態
   const entityRefs = useRef({})
@@ -87,10 +94,11 @@ function App() {
   )
 
   useEffect(() => {
+    if (!selectedTable || !selectedSchema) return
     let cancelled = false
     setLoading(true)
     setError(null)
-    fetch(TABLE_PATH(selectedTable))
+    fetch(`/schemas/${selectedSchema}/tables/${selectedTable}.csv`)
       .then((res) => {
         if (!res.ok) throw new Error('CSVの読み込みに失敗しました')
         return res.text()
@@ -107,7 +115,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [selectedTable])
+  }, [selectedSchema, selectedTable])
 
   // 列ソートのトグル：同じ列を再クリックで昇順・降順を切り替える
   const toggleSort = (column) => {
@@ -124,15 +132,72 @@ function App() {
     return [...table.rows].sort((a, b) => compareCell(a[col], b[col]) * dir)
   }, [table, sort])
 
+  // スキーマ一覧（マスタートブル）の読み込み
   useEffect(() => {
-    fetch('/rdb.json')
+    fetch('/schemas/index.json')
+      .then((res) => res.json())
+      .then((data) => setSchemaList(Array.isArray(data) ? data : []))
+      .catch(() => setSchemaList([]))
+  }, [])
+
+  // 選択中のスキーマの rdb.json を読み込む
+  useEffect(() => {
+    let cancelled = false
+    setSchema(null)
+    setSchemaError(null)
+    fetch(`/schemas/${selectedSchema}/rdb.json`)
       .then((res) => {
         if (!res.ok) throw new Error('ER図情報の読み込みに失敗しました')
         return res.json()
       })
-      .then((data) => setSchema(data))
-      .catch((err) => setSchemaError(err.message))
-  }, [])
+      .then((data) => {
+        if (!cancelled) setSchema(data)
+      })
+      .catch((err) => {
+        if (!cancelled) setSchemaError(err.message)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedSchema])
+
+  // スキーマが変わったときはソート状態をリセットする
+  useEffect(() => {
+    setSort({ column: -1, asc: true })
+  }, [selectedSchema])
+
+  // 選択中のテーブルが新スキーマに無ければ、初めのテーブルに合わせる
+  useEffect(() => {
+    if (!schema) return
+    if (!schema.tables.some((t) => t.name === selectedTable)) {
+      setSelectedTable(schema.tables[0]?.name ?? '')
+    }
+  }, [schema])
+
+  // 現在選択中のスキーマの情報（名前の表示用）
+  const currentSchema = useMemo(
+    () => schemaList.find((s) => s.id === selectedSchema),
+    [schemaList, selectedSchema]
+  )
+
+  // スキーマメニュー外クリック・ESCで閉じる
+  useEffect(() => {
+    if (!schemaMenuOpen) return
+    const handleClick = (event) => {
+      if (schemaSelectorRef.current && !schemaSelectorRef.current.contains(event.target)) {
+        setSchemaMenuOpen(false)
+      }
+    }
+    const handleKey = (event) => {
+      if (event.key === 'Escape') setSchemaMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    window.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      window.removeEventListener('keydown', handleKey)
+    }
+  }, [schemaMenuOpen])
 
   // カードのサイズを計測し、初回の配置（グリッド整列）を決定する
   useEffect(() => {
@@ -347,8 +412,38 @@ function App() {
           <button type="button" className="menu-item align-button" onClick={alignLayout}>
             整列
           </button>
+          <div className="schema-selector" ref={schemaSelectorRef}>
+            <button
+              type="button"
+              className="menu-item schema-toggle"
+              aria-haspopup="menu"
+              aria-expanded={schemaMenuOpen ? 'true' : 'false'}
+              onClick={() => setSchemaMenuOpen((open) => !open)}
+            >
+              <span className="schema-toggle-label">{currentSchema?.name ?? selectedSchema}</span>
+              <span className="schema-toggle-arrow" aria-hidden="true">▾</span>
+            </button>
+            {schemaMenuOpen && (
+              <div className="schema-menu" role="menu">
+                {schemaList.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    role="menuitem"
+                    className={`schema-menu-item ${s.id === selectedSchema ? 'is-active' : ''}`}
+                    onClick={() => {
+                      setSelectedSchema(s.id)
+                      setSchemaMenuOpen(false)
+                    }}
+                  >
+                    <span className="schema-menu-name">{s.name}</span>
+                    <span className="schema-menu-desc">{s.description}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <nav className="menu" aria-label="メインメニュー">
-            <button type="button" className="menu-item">一覧</button>
             <button type="button" className="menu-item">詳細</button>
             <button type="button" className="menu-item">設定</button>
           </nav>
@@ -365,11 +460,11 @@ function App() {
                 value={selectedTable}
                 onChange={(e) => setSelectedTable(e.target.value)}
               >
-                {TABLES.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
+                  {schema?.tables?.map((t) => (
+                    <option key={t.name} value={t.name}>
+                      {t.name}
+                    </option>
+                  ))}
               </select>
             </div>
             {error ? (
