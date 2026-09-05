@@ -33,6 +33,16 @@ function getColumnKind(table, columnName) {
   return table.foreignKeys.some((fk) => fk.columns.includes(columnName)) ? 'fk' : null
 }
 
+// 2つのセル値を比較する。両方が数値なら数値比較、それ以外は大文字小文字を無視した文字列比較。
+function compareCell(a, b) {
+  const na = Number(a)
+  const nb = Number(b)
+  if (a !== '' && b !== '' && !Number.isNaN(na) && !Number.isNaN(nb)) {
+    return na - nb
+  }
+  return String(a ?? '').toLowerCase().localeCompare(String(b ?? '').toLowerCase())
+}
+
 function App() {
   const containerRef = useRef(null)
   const erGridRef = useRef(null)
@@ -53,6 +63,7 @@ function App() {
   const [containerHeight, setContainerHeight] = useState(0)
   const [anchors, setAnchors] = useState({})
   const [dragging, setDragging] = useState(null)
+  const [sort, setSort] = useState({ column: -1, asc: true })
 
   // リレーション（外部キー）の接続情報
   const schemaTable = useMemo(
@@ -97,6 +108,21 @@ function App() {
       cancelled = true
     }
   }, [selectedTable])
+
+  // 列ソートのトグル：同じ列を再クリックで昇順・降順を切り替える
+  const toggleSort = (column) => {
+    setSort((prev) =>
+      prev.column === column ? { column, asc: !prev.asc } : { column, asc: true }
+    )
+  }
+
+  // ソート適用済み行数（未ソートなら元のデータ順）
+  const sortedRows = useMemo(() => {
+    if (!table || sort.column < 0) return table?.rows ?? []
+    const col = sort.column
+    const dir = sort.asc ? 1 : -1
+    return [...table.rows].sort((a, b) => compareCell(a[col], b[col]) * dir)
+  }, [table, sort])
 
   useEffect(() => {
     fetch('/rdb.json')
@@ -364,13 +390,44 @@ function App() {
                             </span>
                           )}
                           <span className="table-header-name">{h}</span>
+                          {(() => {
+                            const active = sort.column === i
+                            return (
+                              <button
+                                type="button"
+                                className={`sort-btn ${active ? 'active ' + (sort.asc ? 'asc' : 'desc') : ''}`}
+                                aria-label={`${h} でソート`}
+                                title={`${h} でソート（再度クリックで逆順）}`}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  toggleSort(i)
+                                }}
+                              >
+                                <svg
+                                  className={`sort-arrow ${active ? (sort.asc ? 'up' : 'down') : 'neutral'}`}
+                                  viewBox="0 0 12 12"
+                                  aria-hidden="true"
+                                >
+                                  <path
+                                    d={
+                                      active
+                                        ? sort.asc
+                                          ? 'M6 2 L10 8 L2 8 Z'
+                                          : 'M6 10 L10 4 L2 4 Z'
+                                        : 'M2 4 L10 4 M2 8 L10 8'
+                                    }
+                                  />
+                                </svg>
+                              </button>
+                            )
+                          })()}
                         </th>
                       )
                     })}
                   </tr>
                 </thead>
                 <tbody>
-                  {table.rows.map((row, i) => (
+                  {sortedRows.map((row, i) => (
                     <tr key={i}>
                       {row.map((cell, j) => (
                         <td key={j}>{cell}</td>
