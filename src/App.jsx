@@ -4,7 +4,7 @@ import { collapseConnections, recenterConnectedLines } from './erLayout.js'
 
 const HEADER_HEIGHT = 56
 const SPLITTER_HEIGHT = 8
-const MIN_TOP = 80
+const MIN_PANEL = 8
 
 // tables ディレクトリにあるCSVファイル名（.csvは除く）
 const TABLES = ['accounts', 'categories', 'orders', 'products']
@@ -15,7 +15,7 @@ const GRID_COLS = 2
 const GRID_GAP = 16
 const GRID_PAD = 16
 const DEFAULT_WIDTH = 240
-const DEFAULT_HEIGHT = 160
+const DEFAULT_HEIGHT = -10
 
 function parseCsv(text) {
   const lines = text
@@ -173,10 +173,10 @@ function App() {
     const onMouseMove = (e) => {
       if (!resizing.current || !containerRef.current) return
       const rect = containerRef.current.getBoundingClientRect()
-      const maxTop = rect.height - HEADER_HEIGHT - SPLITTER_HEIGHT - MIN_TOP
+      const available = rect.height - HEADER_HEIGHT - SPLITTER_HEIGHT
       let h = e.clientY - rect.top - HEADER_HEIGHT
-      if (h < MIN_TOP) h = MIN_TOP
-      if (h > maxTop) h = maxTop
+      if (h < MIN_PANEL) h = MIN_PANEL
+      if (h > available - MIN_PANEL) h = available - MIN_PANEL
       setTopHeight(h)
     }
     const onPointerUp = () => {

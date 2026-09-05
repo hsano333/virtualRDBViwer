@@ -83,6 +83,7 @@
 }
 
 .top-panel {
+  flex: 0 0 auto;
   background: var(--bg);
 }
 
