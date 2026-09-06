@@ -1,0 +1,203 @@
+{
+  "version": "1.0",
+  "description": "支店・社員・商品・区分を管理するRDBスキーマ。支店ごとに異なる商品を扱い、社員が各支店に所属する構造。",
+  "tables": [
+    {
+      "name": "stores",
+      "description": "支店情報の一覧。",
+      "primaryKey": ["id"],
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。支店ID。"
+        },
+        {
+          "name": "支店名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "支店の名前。"
+        },
+        {
+          "name": "所在地",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "支店の所在地。"
+        },
+        {
+          "name": "tel",
+          "type": "TEXT",
+          "nullable": true,
+          "comment": "支店までの電話番号。"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": [
+        {
+          "name": "idx_stores_name",
+          "columns": ["支店名"],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "categories",
+      "description": "商品の分類（区分）情報。",
+      "primaryKey": ["id"],
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。区分ID。"
+        },
+        {
+          "name": "区分名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "区分の名前。"
+        },
+        {
+          "name": "説明",
+          "type": "TEXT",
+          "nullable": true,
+          "comment": "区分の説明文。"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": []
+    },
+    {
+      "name": "employees",
+      "description": "社員情報の一覧。各社員は1つの支店に所属する。",
+      "primaryKey": ["id"],
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。社員ID。"
+        },
+        {
+          "name": "氏名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "社員の氏名。"
+        },
+        {
+          "name": "役職",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "社員の役職。"
+        },
+        {
+          "name": "年齢",
+          "type": "INTEGER",
+          "nullable": true,
+          "comment": "社員の年齢。未入力の場合あり。"
+        },
+        {
+          "name": "支店ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "外部キー。stores.id を参照。所属支店。"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "fk_employee_store",
+          "columns": ["支店ID"],
+          "referencesTable": "stores",
+          "referencesColumns": ["id"],
+          "onDelete": "RESTRICT",
+          "onUpdate": "CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_employees_store",
+          "columns": ["支店ID"],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "products",
+      "description": "商品信息。支店ごとに異なる商品を扱う。区分と支店を参照する。",
+      "primaryKey": ["id"],
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。商品ID。"
+        },
+        {
+          "name": "商品名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "商品名。"
+        },
+        {
+          "name": "価格",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "価格（円）。"
+        },
+        {
+          "name": "区分ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "外部キー。categories.id を参照。商品の区分。"
+        },
+        {
+          "name": "支店ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "外部キー。stores.id を参照。商品を扱う支店。"
+        },
+        {
+          "name": "在庫",
+          "type": "INTEGER",
+          "nullable": true,
+          "comment": "在庫数。"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "fk_product_category",
+          "columns": ["区分ID"],
+          "referencesTable": "categories",
+          "referencesColumns": ["id"],
+          "onDelete": "RESTRICT",
+          "onUpdate": "CASCADE"
+        },
+        {
+          "name": "fk_product_store",
+          "columns": ["支店ID"],
+          "referencesTable": "stores",
+          "referencesColumns": ["id"],
+          "onDelete": "RESTRICT",
+          "onUpdate": "CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_products_store",
+          "columns": ["支店ID"],
+          "unique": false
+        },
+        {
+          "name": "idx_products_category",
+          "columns": ["区分ID"],
+          "unique": false
+        }
+      ]
+    }
+  ]
+}
