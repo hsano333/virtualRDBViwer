@@ -98,7 +98,7 @@ function App() {
     let cancelled = false
     setLoading(true)
     setError(null)
-    fetch(`/schemas/${selectedSchema}/tables/${selectedTable}.csv`)
+    fetch(`${import.meta.env.BASE_URL}schemas/${selectedSchema}/tables/${selectedTable}.csv`)
       .then((res) => {
         if (!res.ok) throw new Error('CSVの読み込みに失敗しました')
         return res.text()
@@ -134,7 +134,7 @@ function App() {
 
   // スキーマ一覧（マスタートブル）の読み込み
   useEffect(() => {
-    fetch('/schemas/index.json')
+    fetch(`${import.meta.env.BASE_URL}schemas/index.json`)
       .then((res) => res.json())
       .then((data) => setSchemaList(Array.isArray(data) ? data : []))
       .catch(() => setSchemaList([]))
@@ -145,7 +145,7 @@ function App() {
     let cancelled = false
     setSchema(null)
     setSchemaError(null)
-    fetch(`/schemas/${selectedSchema}/rdb.json`)
+    fetch(`${import.meta.env.BASE_URL}schemas/${selectedSchema}/rdb.json`)
       .then((res) => {
         if (!res.ok) throw new Error('ER図情報の読み込みに失敗しました')
         return res.json()
