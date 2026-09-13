@@ -11,10 +11,6 @@ const MIN_PANEL = 8
 // デフォルトで使用するスキーマID
 const DEFAULT_SCHEMA_ID = 'schema1'
 
-// ER図のカード配置定数
-const GRID_COLS = 2
-const GRID_GAP = 16
-const GRID_PAD = 16
 const DEFAULT_WIDTH = 240
 const DEFAULT_HEIGHT = -10
 
@@ -80,16 +76,20 @@ function App() {
 
   const fkEdges = useMemo(
     () =>
-      schema
-        ? schema.tables.flatMap((from) =>
-            (from.foreignKeys || []).map((fk) => ({
+    schema
+      ? schema.tables.flatMap((from) =>
+          (from.foreignKeys || []).map((fk) => {
+            const col = (from.columns || []).find((c) => c.name === fk.columns[0])
+            return {
               from: from.name,
               fromColumn: fk.columns[0],
               to: fk.referencesTable,
               toColumn: fk.referencesColumns[0],
-            }))
-          )
-        : [],
+              nullable: !!(col && col.nullable),
+            }
+          })
+        )
+      : [],
     [schema]
   )
 
@@ -211,18 +211,10 @@ function App() {
         h: el ? el.offsetHeight : DEFAULT_HEIGHT,
       }
     })
-    setDimensions(measured)
+  setDimensions(measured)
 
-    const laidOut = {}
-    names.forEach((name, i) => {
-      const { w, h } = measured[name]
-      laidOut[name] = {
-        x: GRID_PAD + (i % GRID_COLS) * (w + GRID_GAP),
-        y: GRID_PAD + Math.floor(i / GRID_COLS) * (h + GRID_GAP),
-      }
-    })
-    setPositions(laidOut)
-  }, [schema])
+  setPositions(arrangeTables(schema, {}, measured))
+}, [schema])
 
   // ドラッグ中にカードを移動させる
   const startDrag = (e, name) => {

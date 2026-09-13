@@ -5,10 +5,16 @@
     "description": "会員・区分・商品・注文の基本的なスキーマ",
     "path": "schema1"
   },
-  {
-    "id": "schema2",
-    "name": "支店・商品管理",
-    "description": "支店ごとに異なる商品を扱い、社員が支店に所属する管理スキーマ",
-    "path": "schema2"
-  }
+    {
+      "id": "schema2",
+      "name": "支店・商品管理",
+      "description": "支店ごとに異なる商品を扱い、社員が支店に所属する管理スキーマ",
+      "path": "schema2"
+    },
+    {
+      "id": "schema_first",
+      "name": "ECサイト（基本）",
+      "description": "顧客・注文・注文詳細・商品(EC)を管理する基本的なスキーマ",
+      "path": "schema_first"
+    }
 ]

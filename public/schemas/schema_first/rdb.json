@@ -1,0 +1,226 @@
+{
+  "version": "1.0",
+  "description": "ECサイトの基本スキーマ。顧客・注文・注文詳細・商品を管理する。order_detailsはordersとproductsの多対多の関係を表す中間テーブル。",
+  "tables": [
+    {
+      "name": "customers",
+      "description": "顧客（アカウント）情報の一覧。",
+      "primaryKey": ["id"],
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。顧客ID。"
+        },
+        {
+          "name": "氏名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "顧客の氏名。"
+        },
+        {
+          "name": "メールアドレス",
+          "type": "TEXT",
+          "nullable": false,
+          "unique": true,
+          "comment": "顧客のメールアドレス。重複不可。"
+        },
+        {
+          "name": "年齢",
+          "type": "INTEGER",
+          "nullable": true,
+          "comment": "顧客の年齢。未入力の場合あり。"
+        },
+        {
+          "name": "電話番号",
+          "type": "TEXT",
+          "nullable": true,
+          "comment": "顧客の電話番号。"
+        },
+        {
+          "name": "登録日",
+          "type": "DATE",
+          "nullable": false,
+          "comment": "アカウントの登録日。"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": [
+        {
+          "name": "idx_customers_email",
+          "columns": ["メールアドレス"],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "products",
+      "description": "商品信息。",
+      "primaryKey": ["id"],
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。商品ID。"
+        },
+        {
+          "name": "商品名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "商品名。"
+        },
+        {
+          "name": "価格",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "商品の定価。"
+        },
+        {
+          "name": "在庫",
+          "type": "INTEGER",
+          "nullable": true,
+          "comment": "現在の在庫数。"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": []
+    },
+    {
+      "name": "orders",
+      "description": "注文情報。各注文は1つの顧客に紐づく。未顧客（ゲスト）の注文も取りうる。",
+      "primaryKey": ["id"],
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。注文ID。"
+        },
+        {
+          "name": "customerID",
+          "type": "INTEGER",
+          "nullable": true,
+          "comment": "外部キー。customers.id を参照。注文した顧客。"
+        },
+        {
+          "name": "注文日",
+          "type": "DATE",
+          "nullable": false,
+          "comment": "注文の日付。"
+        },
+        {
+          "name": "状態",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "注文の進捗状態（完了・処理中・キャンセル）。"
+        },
+        {
+          "name": "総額",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "注文の合計金額。"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "fk_orders_customer",
+          "columns": ["customerID"],
+          "referencesTable": "customers",
+          "referencesColumns": ["id"],
+          "onDelete": "RESTRICT",
+          "onUpdate": "CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_orders_customer",
+          "columns": ["customerID"],
+          "unique": false
+        },
+        {
+          "name": "idx_orders_date",
+          "columns": ["注文日"],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "order_details",
+      "description": "注文詳細。1つの注文に含まれる各商品ごとに記録される。ordersとproductsの多対多を接続する中間テーブル。",
+      "primaryKey": ["id"],
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。注文詳細ID。"
+        },
+        {
+          "name": "orderID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "外部キー。orders.id を参照。対象注文。"
+        },
+        {
+          "name": "productID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "外部キー。products.id を参照。注文した商品。"
+        },
+        {
+          "name": "数量",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "商品の購入数量。"
+        },
+        {
+          "name": "単価",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "注文時点での商品価格。"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "fk_order_details_order",
+          "columns": ["orderID"],
+          "referencesTable": "orders",
+          "referencesColumns": ["id"],
+          "onDelete": "CASCADE",
+          "onUpdate": "CASCADE"
+        },
+        {
+          "name": "fk_order_details_product",
+          "columns": ["productID"],
+          "referencesTable": "products",
+          "referencesColumns": ["id"],
+          "onDelete": "RESTRICT",
+          "onUpdate": "CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_order_details_order",
+          "columns": ["orderID"],
+          "unique": false
+        },
+        {
+          "name": "idx_order_details_product",
+          "columns": ["productID"],
+          "unique": false
+        },
+        {
+          "name": "idx_order_details_pair",
+          "columns": ["orderID", "productID"],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}
