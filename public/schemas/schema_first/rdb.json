@@ -124,6 +124,12 @@
           "type": "INTEGER",
           "nullable": false,
           "comment": "注文の合計金額。"
+        },
+        {
+          "name": "配送先住所",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "注文商品の配送先住所。"
         }
       ],
       "foreignKeys": [
