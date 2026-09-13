@@ -47,6 +47,13 @@
   font-weight: 600;
 }
 
+.connect-button {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
 .align-button:hover {
   background: var(--accent-border, var(--accent));
   border-color: var(--accent-border, var(--accent));
@@ -313,6 +320,8 @@
 }
 
 .er-entity-title {
+  display: flex;
+  align-items: center;
   padding: 8px 12px;
   font-family: var(--heading);
   font-size: 15px;
@@ -320,6 +329,38 @@
   color: var(--text-h);
   background: var(--accent-bg);
   border-bottom: 1px solid var(--border);
+}
+
+.er-entity-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  cursor: pointer;
+  user-select: none;
+}
+
+.er-entity-checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex: 0 0 auto;
+  margin-right: 6px;
+}
+
+.er-entity-toggle input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.er-entity-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .er-columns {

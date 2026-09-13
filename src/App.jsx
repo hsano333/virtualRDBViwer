@@ -40,6 +40,130 @@ function compareCell(a, b) {
   return String(a ?? '').toLowerCase().localeCompare(String(b ?? '').toLowerCase())
 }
 
+// --- 連結（外部結合）処理 ---
+
+// 指定パスのCSVを読み込んで { headers, rows } 形式で返す。
+async function loadSchemaCsv(path) {
+  const res = await fetch(`${import.meta.env.BASE_URL}${path}`)
+  if (!res.ok) throw new Error('CSVの読み込みに失敗しました')
+  return parseCsv(await res.text())
+}
+
+// 連結対象テーブル間の外部キー関係を隣接リストへまとめる。
+// 各エッジは { partner, selfCol, otherCol }。selfCol は adjacency が属するテーブル（外部キーを持つ側）の列、
+// otherCol は partner（される側＝主キー）の列。
+function buildAdjacency(checkedNames, tables) {
+  const adj = {}
+  checkedNames.forEach((n) => {
+    adj[n] = []
+  })
+  tables.forEach((t) => {
+    ;(t.foreignKeys || []).forEach((fk) => {
+      if (!fk.referencesTable) return
+      if (!checkedNames.includes(fk.referencesTable)) return
+      adj[t.name].push({
+        partner: fk.referencesTable,
+        selfCol: fk.columns[0],
+        otherCol: fk.referencesColumns[0],
+      })
+    })
+  })
+  return adj
+}
+
+// 外部キーでつながった順序でチェック済みテーブルを並べる（BFS）。
+// 孤立した要素は新しい先頭として別途並べる。
+function buildJoinOrder(start, adj, checkedNames) {
+  const order = []
+  const visited = new Set()
+  const walk = (node) => {
+    const queue = [node]
+    visited.add(node)
+    while (queue.length > 0) {
+      const n = queue.shift()
+      order.push(n)
+      for (const e of adj[n] || []) {
+        if (!visited.has(e.partner)) {
+          visited.add(e.partner)
+          queue.push(e.partner)
+        }
+      }
+    }
+  }
+  walk(start)
+  for (const n of checkedNames) if (!visited.has(n)) walk(n)
+  return order
+}
+
+// 結合済み集合 S にテーブル T を結合するときの結合キーを決める。
+// keyR は结合済み側（R）の列、keyT は T の列。
+function findJoinKey(S, T, adj) {
+  for (const X of S) {
+    for (const e of (adj[X] || [])) {
+      if (e.partner === T.name) {
+        // X が T を参照: selfCol は X の列（R にある）、otherCol は T の列
+        return { keyR: { table: X, name: e.selfCol }, keyT: e.otherCol }
+      }
+    }
+  }
+  for (const e of (adj[T.name] || [])) {
+    if (S.has(e.partner)) {
+      // T が e.partner を参照: selfCol は T の列、otherCol は partner の列（R にある）
+      return { keyR: { table: e.partner, name: e.otherCol }, keyT: e.selfCol }
+    }
+  }
+  return null
+}
+
+// 2つのテーブルをフル外部結合する。key があればそのキーで結合し、なければ結合せず並べる。
+function fullOuterJoin(R, T, key) {
+  const empty = (len) => Array(len).fill(null)
+  const outCols = [...R.cols, ...T.cols.map((c) => ({ table: T.name, name: c.name }))]
+  if (!key) {
+    const rows = [
+      ...R.rows.map((r) => [...r, ...empty(T.cols.length)]),
+      ...T.rows.map((r) => [...empty(R.cols.length), ...r]),
+    ]
+    return { cols: outCols, rows }
+  }
+  const rIdx = R.cols.findIndex((c) => c.table === key.keyR.table && c.name === key.keyR.name)
+  const tIdx = T.cols.findIndex((c) => c.name === key.keyT)
+  const index = new Map()
+  const used = new Array(T.rows.length).fill(false)
+  T.rows.forEach((row, i) => {
+    const k = row[tIdx]
+    if (!index.has(k)) index.set(k, [])
+    index.get(k).push(i)
+  })
+  const rows = []
+  for (const r of R.rows) {
+    const k = r[rIdx]
+    const matches = index.get(k)
+    if (!matches || matches.length === 0) {
+      rows.push([...r, ...empty(T.cols.length)])
+    } else {
+      for (const oi of matches) {
+        used[oi] = true
+        rows.push([...r, ...T.rows[oi]])
+      }
+    }
+  }
+  for (let i = 0; i < T.rows.length; i++) if (!used[i]) rows.push([...empty(R.cols.length), ...T.rows[i]])
+  return { cols: outCols, rows }
+}
+
+// 並べた順序で順に結合し、最終的な結合結果を返す。
+function joinTables(first, order, adj, tableMap) {
+  let R = { cols: first.cols.map((c) => ({ table: first.name, name: c.name })), rows: first.rows }
+  const S = new Set([first.name])
+  for (let i = 1; i < order.length; i++) {
+    const T = tableMap.get(order[i])
+    R = fullOuterJoin(R, T, findJoinKey(S, T, adj))
+    S.add(T.name)
+  }
+  return R
+}
+
 function App() {
   const containerRef = useRef(null)
   const erGridRef = useRef(null)
@@ -67,6 +191,10 @@ function App() {
   const [anchors, setAnchors] = useState({})
   const [dragging, setDragging] = useState(null)
   const [sort, setSort] = useState({ column: -1, asc: true })
+  const [checked, setChecked] = useState({})
+  const [joinResult, setJoinResult] = useState(null)
+  const [joinLoading, setJoinLoading] = useState(false)
+  const [joinError, setJoinError] = useState(null)
 
   // リレーション（外部キー）の接続情報
   const schemaTable = useMemo(
@@ -131,6 +259,47 @@ function App() {
     const dir = sort.asc ? 1 : -1
     return [...table.rows].sort((a, b) => compareCell(a[col], b[col]) * dir)
   }, [table, sort])
+
+  // 選択中のスキーマが変われば、前の連結結果は壊れるのでクリアする
+  useEffect(() => {
+    setJoinResult(null)
+    setJoinError(null)
+    setJoinLoading(false)
+  }, [selectedSchema])
+
+  // 選択済みチェックのテーブルを外部結合（フル結合）し、結果を返す
+  const performConnect = async () => {
+    if (!schema) return
+    const checkedNames = schema.tables
+      .filter((t) => checked[t.name])
+      .map((t) => t.name)
+    if (checkedNames.length === 0) {
+      setJoinError('2つ以上のテーブルチェックして連結してください')
+      return
+    }
+    setJoinLoading(true)
+    setJoinError(null)
+    try {
+      const tableMap = new Map()
+      for (const name of checkedNames) {
+        const data = await loadSchemaCsv(`schemas/${selectedSchema}/tables/${name}.csv`)
+        tableMap.set(name, {
+          name,
+          cols: data.headers.map((h) => ({ name: h })),
+          rows: data.rows,
+        })
+      }
+      const adj = buildAdjacency(checkedNames, schema.tables)
+      const order = buildJoinOrder(checkedNames[0], adj, checkedNames)
+      const first = tableMap.get(order[0])
+      const result = joinTables(first, order, adj, tableMap)
+      setJoinResult(result)
+    } catch (err) {
+      setJoinError(err.message)
+    } finally {
+      setJoinLoading(false)
+    }
+  }
 
   // スキーマ一覧（マスタートブル）の読み込み
   useEffect(() => {
@@ -327,6 +496,27 @@ function App() {
     return dx * dx + dy * dy
   }
 
+  // 2点を方向の単位ベクトルで返す
+  const dirBetween = (x1, y1, x2, y2) => {
+    const dx = x2 - x1
+    const dy = y2 - y1
+    const d = Math.hypot(dx, dy) || 1
+    return { x: dx / d, y: dy / d }
+  }
+
+  // 指定した方向へ広がるカサ（多）の記号の3本の枝の先端を返す
+  const crowsFoot = (px, py, dir, spread = 0.4, len = 6) => {
+    const rot = (a) => ({
+      x: dir.x * Math.cos(a) - dir.y * Math.sin(a),
+      y: dir.x * Math.sin(a) + dir.y * Math.cos(a),
+    })
+    return {
+      top: { x: px + rot(spread).x * len, y: py + rot(spread).y * len },
+      mid: { x: px + dir.x * len, y: py + dir.y * len },
+      bot: { x: px + rot(-spread).x * len, y: py + rot(-spread).y * len },
+    }
+  }
+
   // 2点を折れ線で結ぶパスを生成する。丸みをつける。
   // 必ず最初に横に伸びてから縦へ折れ、最後に横に伸びて目標に届くエルボー。
   const orthoPath = (sx, sy, tx, ty, r = 10) => {
@@ -348,40 +538,41 @@ function App() {
     if (!schema || !erGridRef.current) return
     const gridRect = erGridRef.current.getBoundingClientRect()
     const result = {}
-    fkEdges.forEach((edge) => {
-      const sEl = columnRefs.current[`${edge.from}.${edge.fromColumn}`]
-      const tEl = columnRefs.current[`${edge.to}.${edge.toColumn}`]
-      if (!sEl || !tEl) return
-      const s = sEl.getBoundingClientRect()
-      const t = tEl.getBoundingClientRect()
-      const sRect = {
-        left: s.left - gridRect.left,
-        top: s.top - gridRect.top,
-        right: s.right - gridRect.left,
-        bottom: s.bottom - gridRect.top,
-      }
-      const tRect = {
-        left: t.left - gridRect.left,
-        top: t.top - gridRect.top,
-        right: t.right - gridRect.left,
-        bottom: t.bottom - gridRect.top,
-      }
-      const sC = { x: (sRect.left + sRect.right) / 2, y: (sRect.top + sRect.bottom) / 2 }
-      const tC = { x: (tRect.left + tRect.right) / 2, y: (tRect.top + tRect.bottom) / 2 }
-      const sAnchor = Object.values(sideCenters(sRect)).reduce(
-        (best, p) => (dist2(p, tC) < dist2(best, tC) ? p : best)
-      )
-      const tAnchor = Object.values(sideCenters(tRect)).reduce(
-        (best, p) => (dist2(p, sC) < dist2(best, sC) ? p : best)
-      )
-      result[`${edge.from}.${edge.fromColumn}>>${edge.to}.${edge.toColumn}`] = {
-        path: orthoPath(sAnchor.x, sAnchor.y, tAnchor.x, tAnchor.y),
-        sx: sAnchor.x,
-        sy: sAnchor.y,
-        tx: tAnchor.x,
-        ty: tAnchor.y,
-      }
-    })
+    fkEdges
+      .forEach((edge) => {
+        const sEl = columnRefs.current[`${edge.from}.${edge.fromColumn}`]
+        const tEl = columnRefs.current[`${edge.to}.${edge.toColumn}`]
+        if (!sEl || !tEl) return
+        const s = sEl.getBoundingClientRect()
+        const t = tEl.getBoundingClientRect()
+        const sRect = {
+          left: s.left - gridRect.left,
+          top: s.top - gridRect.top,
+          right: s.right - gridRect.left,
+          bottom: s.bottom - gridRect.top,
+        }
+        const tRect = {
+          left: t.left - gridRect.left,
+          top: t.top - gridRect.top,
+          right: t.right - gridRect.left,
+          bottom: t.bottom - gridRect.top,
+        }
+        const sC = { x: (sRect.left + sRect.right) / 2, y: (sRect.top + sRect.bottom) / 2 }
+        const tC = { x: (tRect.left + tRect.right) / 2, y: (tRect.top + tRect.bottom) / 2 }
+        const sAnchor = Object.values(sideCenters(sRect)).reduce(
+          (best, p) => (dist2(p, tC) < dist2(best, tC) ? p : best)
+        )
+        const tAnchor = Object.values(sideCenters(tRect)).reduce(
+          (best, p) => (dist2(p, sC) < dist2(best, sC) ? p : best)
+        )
+        result[`${edge.from}.${edge.fromColumn}>>${edge.to}.${edge.toColumn}`] = {
+          path: orthoPath(sAnchor.x, sAnchor.y, tAnchor.x, tAnchor.y),
+          sx: sAnchor.x,
+          sy: sAnchor.y,
+          tx: tAnchor.x,
+          ty: tAnchor.y,
+        }
+      })
     setAnchors(result)
   }, [schema, positions, fkEdges])
 
@@ -459,7 +650,37 @@ function App() {
                   ))}
               </select>
             </div>
-            {error ? (
+            {joinError ? (
+              <p className="table-error">{joinError}</p>
+            ) : joinLoading ? (
+              <p className="table-loading">連結中…</p>
+            ) : joinResult ? (
+              <div className="join-view">
+                <div className="panel-heading-row">
+                  <h2 className="panel-heading">連結結果</h2>
+                </div>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      {joinResult.cols.map((c, i) => (
+                        <th key={i} className="table-header-col">
+                          <span className="table-header-name">{c.table}.{c.name}</span>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {joinResult.rows.map((row, i) => (
+                      <tr key={i}>
+                        {row.map((cell, j) => (
+                          <td key={j}>{cell ?? ''}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : error ? (
               <p className="table-error">{error}</p>
             ) : loading || !table ? (
               <p className="table-loading">読み込み中…</p>
@@ -537,7 +758,17 @@ function App() {
 
         <div className="panel bottom-panel">
           <div className="panel-inner">
-            <h2 className="panel-heading">ER図</h2>
+            <div className="panel-heading-row">
+              <h2 className="panel-heading">ER図</h2>
+              <button
+                type="button"
+                className="menu-item connect-button"
+                onClick={performConnect}
+                disabled={joinLoading || !schema}
+              >
+                連結
+              </button>
+            </div>
             {schemaError ? (
               <p className="table-error">{schemaError}</p>
             ) : !schema ? (
@@ -557,19 +788,41 @@ function App() {
                     zIndex: 0,
                   }}
                 >
-                  {fkEdges.map((edge) => {
-                    const a = anchors[`${edge.from}.${edge.fromColumn}>>${edge.to}.${edge.toColumn}`]
-                    if (!a) return null
-                    return (
-                      <g key={edge.from + edge.fromColumn + edge.to + edge.toColumn}>
-                        <path d={a.path} className="er-connector" />
-                        <circle className="er-conn-dot" cx={a.sx} cy={a.sy} r={2.5} />
-                        <circle className="er-conn-dot" cx={a.tx} cy={a.ty} r={2.5} />
-                      </g>
-                    )
-                  })}
+                  {fkEdges
+                    .map((edge) => {
+                      const a = anchors[`${edge.from}.${edge.fromColumn}>>${edge.to}.${edge.toColumn}`]
+                      if (!a) return null
+                      const dir = dirBetween(a.sx, a.sy, a.tx, a.ty)
+                      const fp = crowsFoot(a.sx, a.sy, dir)
+                      const perp = { x: -dir.y, y: dir.x }
+                      const barHalf = 4
+                      const barP1 = { x: a.tx + perp.x * barHalf, y: a.ty + perp.y * barHalf }
+                      const barP2 = { x: a.tx - perp.x * barHalf, y: a.ty - perp.y * barHalf }
+                      return (
+                        <g key={edge.from + edge.fromColumn + edge.to + edge.toColumn}>
+                          <path d={a.path} className="er-connector" />
+                          {/* 起点（外部キー側）：カサ（多）。任意なら円を付ける */}
+                          {edge.nullable && (
+                            <circle className="er-conn-optional" cx={a.sx} cy={a.sy} r={3.5} />
+                          )}
+                          <path
+                            className="er-conn-crowfoot"
+                            d={`M ${a.sx} ${a.sy} L ${fp.top.x} ${fp.top.y} M ${a.sx} ${a.sy} L ${fp.mid.x} ${fp.mid.y} M ${a.sx} ${a.sy} L ${fp.bot.x} ${fp.bot.y}`}
+                          />
+                          {/* 終点（参照対象側）：一（one）*/}
+                          <line
+                            className="er-conn-one"
+                            x1={barP1.x}
+                            y1={barP1.y}
+                            x2={barP2.x}
+                            y2={barP2.y}
+                          />
+                        </g>
+                      )
+                    })}
                 </svg>
-                {schema.tables.map((t) => (
+                {schema.tables
+                  .map((t) => (
                   <div
                     key={t.name}
                     ref={(el) => {
@@ -579,7 +832,10 @@ function App() {
                     role="button"
                     tabIndex={0}
                     onMouseDown={(e) => startDrag(e, t.name)}
-                    onClick={() => setSelectedTable(t.name)}
+                    onClick={() => {
+                      setSelectedTable(t.name)
+                      setJoinResult(null)
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault()
@@ -592,7 +848,22 @@ function App() {
                       top: positions[t.name]?.y ?? 0,
                     }}
                   >
-                    <div className="er-entity-title">{t.name}</div>
+                    <div className="er-entity-title">
+                        <input
+                          type="checkbox"
+                          className="er-entity-checkbox"
+                          checked={!!checked[t.name]}
+                          onChange={() =>
+                            setChecked((prev) => ({
+                              ...prev,
+                              [t.name]: !prev[t.name],
+                            }))
+                          }
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <span className="er-entity-name">{t.name}</span>
+                    </div>
                     <ul className="er-columns">
                       {t.columns.map((c) => {
                         const kind = getColumnKind(t, c.name)
