@@ -1,0 +1,96 @@
+{
+  "version": "1.0",
+  "description": "tablesディレクトリ内のCSVで表される各テーブルのRDBスキーマ情報。顧客と注文の1対多のカーディナリティーを表す。",
+  "tables": [
+    {
+      "name": "顧客",
+      "description": "顧客情報の一覧。各顧客は0件以上の注文を持つことができる。",
+      "primaryKey": ["顧客ID"],
+      "columns": [
+        {
+          "name": "顧客ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。顧客ID。"
+        },
+        {
+          "name": "氏名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "顧客の氏名。"
+        },
+        {
+          "name": "メールアドレス",
+          "type": "TEXT",
+          "nullable": false,
+          "unique": true,
+          "comment": "顧客のメールアドレス。"
+        },
+        {
+          "name": "住所",
+          "type": "TEXT",
+          "nullable": true,
+          "comment": "顧客の住所。"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": []
+    },
+    {
+      "name": "注文",
+      "description": "注文情報の一覧。1対多の関係のため、顧客IDは外部キーとして機能する。各注文は1件の顧客に紐づく。1件の顧客は複数の注文を持つことができる。",
+      "primaryKey": ["注文ID"],
+      "columns": [
+        {
+          "name": "注文ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。注文ID。"
+        },
+        {
+          "name": "顧客ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "外部キー。顧客.顧客ID を参照。1対多の関係。"
+        },
+        {
+          "name": "商品名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "注文した商品名。"
+        },
+        {
+          "name": "数量",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "注文数量。"
+        },
+        {
+          "name": "注文日",
+          "type": "DATE",
+          "nullable": false,
+          "comment": "注文日。"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "fk_order_customer",
+          "columns": ["顧客ID"],
+          "referencesTable": "顧客",
+          "referencesColumns": ["顧客ID"],
+          "onDelete": "CASCADE",
+          "onUpdate": "CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_order_customer",
+          "columns": ["顧客ID"],
+          "unique": false
+        }
+      ]
+    }
+  ]
+}

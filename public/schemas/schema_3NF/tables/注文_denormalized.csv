@@ -1,0 +1,5 @@
+注文ID,顧客ID,顧客名,顧客メールアドレス,注文日,支払方法
+1,1,山田太郎,yamataka@example.com,2024-01-10,カード
+2,2,鈴木花子,suzuki@example.com,2024-01-11,コンビニ
+3,1,山田太郎,yamataka@example.com,2024-01-12,カード
+4,3,佐藤健一,sato@example.com,2024-01-13,銀行振替

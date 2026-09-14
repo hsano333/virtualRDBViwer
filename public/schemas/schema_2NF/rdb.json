@@ -1,0 +1,128 @@
+{
+  "version": "1.0",
+  "description": "tablesディレクトリ内のCSVで表される各テーブルのRDBスキーマ情報。注文の第2正規化before/afterを表す。",
+  "tables": [
+    {
+      "name": "orders",
+      "description": "第2正規化された注文情報。顧客名は注文IDのみに依存する。",
+      "primaryKey": [
+        "注文ID"
+      ],
+      "columns": [
+        {
+          "name": "注文ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "主キー。注文ID。"
+        },
+        {
+          "name": "顧客ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "顧客ID。注文を上げた顧客。"
+        },
+        {
+          "name": "顧客名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "顧客名。注文IDのみに依存する。"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": [
+        {
+          "name": "idx_orders_customer",
+          "columns": [
+            "顧客ID"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "order_details",
+      "description": "第2正規化された注文明細。1つの注文に含まれる各商品ごとに記録される。複合主キー(注文ID, 商品ID)を持ち、数量は両方のキーの組み合わせに完全に依存するため部分依存を持たない。",
+      "primaryKey": [
+        "注文ID",
+        "商品ID"
+      ],
+      "columns": [
+        {
+          "name": "注文ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "複合主キーの一要素。注文ID。"
+        },
+        {
+          "name": "商品ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "複合主キーの一要素。商品ID。"
+        },
+        {
+          "name": "数量",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "注文した商品数量。複合主キー(注文ID, 商品ID)の両者に依存。"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "fk_order_details_order",
+          "columns": [
+            "注文ID"
+          ],
+          "referencesTable": "orders",
+          "referencesColumns": [
+            "注文ID"
+          ],
+          "onDelete": "CASCADE",
+          "onUpdate": "CASCADE"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "orders_denormalized",
+      "description": "非2正規化の注文情報。複合主キー(注文ID, 商品ID)に対して顧客名が注文IDのみに依存する部分依存を持つため第2正規化されていない。",
+      "primaryKey": [
+        "注文ID",
+        "商品ID"
+      ],
+      "columns": [
+        {
+          "name": "注文ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "複合主キーの一要素。注文ID。1つの注文に複数の商品持てるため重複する。"
+        },
+        {
+          "name": "顧客ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "顧客ID。注文IDのみに依存する。"
+        },
+        {
+          "name": "顧客名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "顧客名。注文IDのみに依存する。"
+        },
+        {
+          "name": "商品ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "複合主キーの一要素。商品ID。1つの注文に複数の商品持てるため重複する。"
+        },
+        {
+          "name": "数量",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "注文した商品数量。複合主キー(注文ID, 商品ID)の两者に完全に依存する。"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": []
+    }
+  ]
+}

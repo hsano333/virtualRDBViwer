@@ -1,0 +1,84 @@
+{
+  "version": "1.0",
+  "description": "tablesディレクトリ内のCSVで表される各テーブルのRDBスキーマ情報。",
+  "tables": [
+    {
+      "name": "orders_1nf",
+      "description": "1正規化された注文詳細。1行の商品名と数量は原子値であり、繰返し群を持たない。複合主キーは注文IDと商品名の組み合わせで1つの注文に複数の商品を持つ。",
+      "primaryKey": ["注文ID", "商品名"],
+      "columns": [
+        {
+          "name": "注文ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "注文ID。複合主キーの一要素。"
+        },
+        {
+          "name": "顧客名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "注文した顧客の名前。"
+        },
+        {
+          "name": "注文日",
+          "type": "DATE",
+          "nullable": false,
+          "comment": "注文の日付。"
+        },
+        {
+          "name": "商品名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "商品名。原子値。複合主キーの一要素。"
+        },
+        {
+          "name": "数量",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "注文した商品数量。原子値。"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": []
+    },
+    {
+      "name": "orders_not_1nf",
+      "description": "非1正規化の注文情報。1つの注文に複数の商品カンマ区切りで保持しており、繰返し群があるため1正規化されていない。",
+      "primaryKey": [],
+      "columns": [
+        {
+          "name": "注文ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "注文ID。繰返し群のため単独の主キーに不能。"
+        },
+        {
+          "name": "顧客名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "注文した顧客の名前。"
+        },
+        {
+          "name": "注文日",
+          "type": "DATE",
+          "nullable": false,
+          "comment": "注文の日付。"
+        },
+        {
+          "name": "商品名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "商品名をカンマ区切りで複数保持。繰返し群・非原子値。"
+        },
+        {
+          "name": "数量",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "各商品の数量をカンマ区切りで保持。繰返し群・非原子値。"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": []
+    }
+  ]
+}

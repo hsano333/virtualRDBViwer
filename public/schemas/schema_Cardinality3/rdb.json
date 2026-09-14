@@ -1,0 +1,185 @@
+{
+  "version": "1.0",
+  "description": "tablesディレクトリ内のCSVで表される各テーブルのRDBスキーマ情報。2組の多対多のカーディナリティーを中間テーブルで分割して表す。1組は顧客と商品的多対多、もう1組は商品とカテゴリの多対多。合計5テーブルで構成される。",
+  "tables": [
+    {
+      "name": "顧客",
+      "description": "顧客情報の一覧。各顧客は0件以上の商品を購入することができる。注文詳細を通じて商品と多対多の関係。",
+      "primaryKey": ["顧客ID"],
+      "columns": [
+        {
+          "name": "顧客ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。顧客ID。"
+        },
+        {
+          "name": "氏名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "顧客の氏名。"
+        },
+        {
+          "name": "メールアドレス",
+          "type": "TEXT",
+          "nullable": false,
+          "unique": true,
+          "comment": "顧客のメールアドレス。"
+        },
+        {
+          "name": "住所",
+          "type": "TEXT",
+          "nullable": true,
+          "comment": "顧客の住所。"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": []
+    },
+    {
+      "name": "商品",
+      "description": "商品情報の一覧。1つの商品は複数のカテゴリに分類でき、複数の顧客に購入される。カテゴリと商品カテゴリで多対多、注文詳細で顧客と多対多の関係。",
+      "primaryKey": ["商品ID"],
+      "columns": [
+        {
+          "name": "商品ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。商品ID。"
+        },
+        {
+          "name": "商品名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "商品名。"
+        },
+        {
+          "name": "価格",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "価格（円）。"
+        },
+        {
+          "name": "メーカー",
+          "type": "TEXT",
+          "nullable": true,
+          "comment": "メーカー名。"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": []
+    },
+    {
+      "name": "注文詳細",
+      "description": "顧客と商品との多対多の関係を表す中間テーブル。1件の注文詳細は1件の顧客と1件の商品に紐づく。1件の顧客は複数の商品を購入でき、1の商品を複数の顧客に販売できる。主キーは顧客IDと商品IDの複合キー。",
+      "primaryKey": ["顧客ID", "商品ID"],
+      "columns": [
+        {
+          "name": "顧客ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "複合主キーであり外部キー。顧客.顧客ID を参照。多対多の関係。"
+        },
+        {
+          "name": "商品ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "複合主キーであり外部キー。商品.商品ID を参照。多対多の関係。"
+        },
+        {
+          "name": "数量",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "購入数量。"
+        },
+        {
+          "name": "注文日",
+          "type": "DATE",
+          "nullable": false,
+          "comment": "注文日。"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "fk_order_detail_customer",
+          "columns": ["顧客ID"],
+          "referencesTable": "顧客",
+          "referencesColumns": ["顧客ID"],
+          "onDelete": "CASCADE",
+          "onUpdate": "CASCADE"
+        },
+        {
+          "name": "fk_order_detail_product",
+          "columns": ["商品ID"],
+          "referencesTable": "商品",
+          "referencesColumns": ["商品ID"],
+          "onDelete": "CASCADE",
+          "onUpdate": "CASCADE"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "カテゴリ",
+      "description": "商品信息のカテゴリの一覧。1つのカテゴリには複数の商品が分類できる。商品カテゴリを通じて商品と多対多の関係。",
+      "primaryKey": ["カテゴリID"],
+      "columns": [
+        {
+          "name": "カテゴリID",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。カテゴリID。"
+        },
+        {
+          "name": "カテゴリ名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "カテゴリ名。"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": []
+    },
+    {
+      "name": "商品カテゴリ",
+      "description": "商品とカテゴリとの多対多の関係を表す中間テーブル。1件の商品カテゴリは1件の商品と1件のカテゴリに紐づく。1の商品は複数のカテゴリに分類でき、1のカテゴリに複数の商品が分類できる。主キーは商品IDとカテゴリIDの複合キー。",
+      "primaryKey": ["商品ID", "カテゴリID"],
+      "columns": [
+        {
+          "name": "商品ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "複合主キーであり外部キー。商品.商品ID を参照。多対多の関係。"
+        },
+        {
+          "name": "カテゴリID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "複合主キーであり外部キー。カテゴリ.カテゴリID を参照。多対多の関係。"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "fk_product_category_product",
+          "columns": ["商品ID"],
+          "referencesTable": "商品",
+          "referencesColumns": ["商品ID"],
+          "onDelete": "CASCADE",
+          "onUpdate": "CASCADE"
+        },
+        {
+          "name": "fk_product_category_category",
+          "columns": ["カテゴリID"],
+          "referencesTable": "カテゴリ",
+          "referencesColumns": ["カテゴリID"],
+          "onDelete": "CASCADE",
+          "onUpdate": "CASCADE"
+        }
+      ],
+      "indexes": []
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "version": "1.0",
+  "description": "tablesディレクトリ内のCSVで表される各テーブルのRDBスキーマ情報。注文の第3正規化before/afterを表す。",
+  "tables": [
+    {
+      "name": "注文",
+      "description": "第3正規化された注文情報。顧客情報は顧客テーブルに分離され、注文テーブルは顧客IDのみを保持するため推移依存を持たない。",
+      "primaryKey": ["注文ID"],
+      "columns": [
+        {
+          "name": "注文ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "主キー。注文ID。"
+        },
+        {
+          "name": "顧客ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "外部キー。顧客.顧客ID を参照。注文を上げた顧客。"
+        },
+        {
+          "name": "注文日",
+          "type": "DATE",
+          "nullable": false,
+          "comment": "注文の日付。"
+        },
+        {
+          "name": "支払方法",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "支払方法。"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "fk_order_customer",
+          "columns": ["顧客ID"],
+          "referencesTable": "顧客",
+          "referencesColumns": ["顧客ID"],
+          "onDelete": "RESTRICT",
+          "onUpdate": "CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_order_customer",
+          "columns": ["顧客ID"],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "顧客",
+      "description": "顧客情報の一覧。各顧客は複数の注文の対象となる。",
+      "primaryKey": ["顧客ID"],
+      "columns": [
+        {
+          "name": "顧客ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。顧客ID。"
+        },
+        {
+          "name": "顧客名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "顧客名。"
+        },
+        {
+          "name": "顧客メールアドレス",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "顧客のメールアドレス。"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": []
+    },
+    {
+      "name": "注文_denormalized",
+      "description": "非3正規化の注文情報。単一主キー(注文ID)に対して顧客名・顧客メールアドレスが顧客IDに依存する推移依存（注文ID→顧客ID→顧客名・顧客メールアドレス）を持つため第3正規化されていない。第2正規化は単一主キーのため満たしている。",
+      "primaryKey": ["注文ID"],
+      "columns": [
+        {
+          "name": "注文ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "主キー。注文ID。"
+        },
+        {
+          "name": "顧客ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "顧客ID。注文IDに依存する。"
+        },
+        {
+          "name": "顧客名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "顧客名。顧客IDに依存する推移依存のため非キー属性間の依存を持つ。"
+        },
+        {
+          "name": "顧客メールアドレス",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "顧客のメールアドレス。顧客IDに依存する推移依存を持つ。"
+        },
+        {
+          "name": "注文日",
+          "type": "DATE",
+          "nullable": false,
+          "comment": "注文の日付。"
+        },
+        {
+          "name": "支払方法",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "支払方法。"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": []
+    }
+  ]
+}

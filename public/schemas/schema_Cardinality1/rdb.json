@@ -1,0 +1,83 @@
+{
+  "version": "1.0",
+  "description": "tablesディレクトリ内のCSVで表される各テーブルのRDBスキーマ情報。社員と給与情報の1対1のカーディナリティーを表す。",
+  "tables": [
+    {
+      "name": "社員",
+      "description": "社員情報の一覧。各社員は1件の給与情報を持つ。",
+      "primaryKey": ["社員ID"],
+      "columns": [
+        {
+          "name": "社員ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "autoIncrement": true,
+          "comment": "主キー。社員ID。"
+        },
+        {
+          "name": "氏名",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "社員の氏名。"
+        },
+        {
+          "name": "部署",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "所属部署。"
+        },
+        {
+          "name": "入社日",
+          "type": "DATE",
+          "nullable": false,
+          "comment": "入社日。"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": []
+    },
+    {
+      "name": "給与情報",
+      "description": "社員の給与情報。1対1の関係のため、社員IDが主キーであり外部キーとして機能する。各社員は1件の給与情報のみ持つ。",
+      "primaryKey": ["社員ID"],
+      "columns": [
+        {
+          "name": "社員ID",
+          "type": "INTEGER",
+          "nullable": false,
+          "unique": true,
+          "comment": "主キーであり外部キー。社員.社員ID を参照。1対1の関係。"
+        },
+        {
+          "name": "基本給",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "基本給（円）。"
+        },
+        {
+          "name": "業績賞金",
+          "type": "INTEGER",
+          "nullable": true,
+          "comment": "業績賞金（円）。"
+        },
+        {
+          "name": "更新月",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "給与の更新月。"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "fk_salary_employee",
+          "columns": ["社員ID"],
+          "referencesTable": "社員",
+          "referencesColumns": ["社員ID"],
+          "onDelete": "CASCADE",
+          "onUpdate": "CASCADE"
+        }
+      ],
+      "indexes": []
+    }
+  ]
+}

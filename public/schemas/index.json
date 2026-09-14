@@ -16,5 +16,41 @@
       "name": "ECサイト（基本）",
       "description": "顧客・注文・注文詳細・商品(EC)を管理する基本的なスキーマ",
       "path": "schema_first"
+    },
+    {
+      "id": "schema_1NF",
+      "name": "第1正規化",
+      "description": "第1正規化説明用",
+      "path": "schema_1NF"
+    },
+    {
+      "id": "schema_2NF",
+      "name": "第2正規化",
+      "description": "第2正規化説明用",
+      "path": "schema_2NF"
+    },
+    {
+      "id": "schema_3NF",
+      "name": "第3正規化",
+      "description": "第3正規化説明用",
+      "path": "schema_3NF"
+    },
+    {
+      "id": "schema_Cardinality1",
+      "name": "1対1のカーディナリティー",
+      "description": "社員と給与情報の1対1の関連",
+      "path": "schema_Cardinality1"
+    },
+    {
+      "id": "schema_Cardinality2",
+      "name": "1対多のカーディナリティー",
+      "description": "顧客と注文の1対多の関連",
+      "path": "schema_Cardinality2"
+    },
+    {
+      "id": "schema_Cardinality3",
+      "name": "多対多のカーディナリティー",
+      "description": "顧客-商品と商品-カテゴリの多対多の関連（中間テーブル分割）",
+      "path": "schema_Cardinality3"
     }
 ]
