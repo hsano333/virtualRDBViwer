@@ -1,10 +1,10 @@
 {
   "version": "1.0",
-  "description": "tablesディレクトリ内のCSVで表される各テーブルのRDBスキーマ情報。顧客と商品之多対多のカーディナリティーを中間テーブルで分割して表す。3テーブルで構成される。",
+  "description": "tablesディレクトリ内のCSVで表される各テーブルのRDBスキーマ情報。1組は顧客と商品的多対多を中間テーブル（購入記録）で分割して表す。もう1組は顧客_cpと商品_cpの多対多で、中間テーブルを使わず2テーブルを直接つなげる。",
   "tables": [
     {
       "name": "顧客",
-      "description": "顧客情報の一覧。各顧客は0件以上の商品を購入することができる。購入記録を通じて商品と多対多の関係。",
+      "description": "顧客情報の一覧。各顧客は0件以上の商品を買うことができる。購入記録を通じて商品と多対多の関係。",
       "primaryKey": ["顧客ID"],
       "columns": [
         {
@@ -39,7 +39,7 @@
     },
     {
       "name": "商品",
-      "description": "商品信息の一覧。1商品は複数のカテゴリに分類でき、複数の顧客に購入される。購入記録で顧客と多対多の関係。",
+      "description": "商品信息の一覧。1商品は複数のカテゴリに分類でき、複数の顧客に買われる。購入記録で顧客と多対多の関係。",
       "primaryKey": ["商品ID"],
       "columns": [
         {
@@ -115,6 +115,102 @@
           "columns": ["商品ID"],
           "referencesTable": "商品",
           "referencesColumns": ["商品ID"],
+          "onDelete": "CASCADE",
+          "onUpdate": "CASCADE"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "顧客_cp",
+      "description": "顧客情報の多対多用コピーテーブル。商品_cpと直接結びつく多対多を表す。中間テーブルは使わず、顧客ID_cpと商品ID_cpの複合主キーで顧客と商品を結ぶ。1顧客は複数の商品に、1商品は複数の顧客に登場する。",
+      "primaryKey": ["顧客ID_cp", "商品ID_cp"],
+      "columns": [
+        {
+          "name": "顧客ID_cp",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "複合主キーであり外部キー。商品_cp.商品ID_cp を参照。多対多の関係。"
+        },
+        {
+          "name": "氏名_cp",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "顧客の氏名。"
+        },
+        {
+          "name": "メールアドレス_cp",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "顧客のメールアドレス。"
+        },
+        {
+          "name": "住所_cp",
+          "type": "TEXT",
+          "nullable": true,
+          "comment": "顧客の住所。"
+        },
+        {
+          "name": "商品ID_cp",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "複合主キーであり外部キー。顧客_cp.顧客ID_cp を参照。多対多の関係。"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "fk_customer_cp_product",
+          "columns": ["商品ID_cp"],
+          "referencesTable": "商品_cp",
+          "referencesColumns": ["商品ID_cp"],
+          "onDelete": "CASCADE",
+          "onUpdate": "CASCADE"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "商品_cp",
+      "description": "商品信息の多対多用コピーテーブル。顧客_cpと直接結びつく多対多を表す。中間テーブルは使わず、商品ID_cpと顧客ID_cpの複合主キーで商品と顧客を結ぶ。1商品は多個カテゴリに分類でき、 顧客に購入される。",
+      "primaryKey": ["商品ID_cp", "顧客ID_cp"],
+      "columns": [
+        {
+          "name": "商品ID_cp",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "複合主キーであり外部キー。顧客_cp.顧客ID_cp を参照。多対多の関係。"
+        },
+        {
+          "name": "商品名_cp",
+          "type": "TEXT",
+          "nullable": false,
+          "comment": "商品名。"
+        },
+        {
+          "name": "価格_cp",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "価格（円）。"
+        },
+        {
+          "name": "メーカー_cp",
+          "type": "TEXT",
+          "nullable": true,
+          "comment": "メーカー名。"
+        },
+        {
+          "name": "顧客ID_cp",
+          "type": "INTEGER",
+          "nullable": false,
+          "comment": "複合主キーであり外部キー。商品_cp.商品ID_cp を参照。多対多の関係。"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "fk_product_cp_customer",
+          "columns": ["顧客ID_cp"],
+          "referencesTable": "顧客_cp",
+          "referencesColumns": ["顧客ID_cp"],
           "onDelete": "CASCADE",
           "onUpdate": "CASCADE"
         }
