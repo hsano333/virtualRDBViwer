@@ -9,10 +9,9 @@
       "columns": [
         {
           "name": "id",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "autoIncrement": true,
-          "comment": "主キー。顧客ID。"
+          "comment": "主キー。顧客ID。C0001のような固定長(5文字)の文字列。"
         },
         {
           "name": "氏名",
@@ -62,10 +61,9 @@
       "columns": [
         {
           "name": "id",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "autoIncrement": true,
-          "comment": "主キー。商品ID。"
+          "comment": "主キー。商品ID。P0001のような固定長(5文字)の文字列。"
         },
         {
           "name": "商品名",
@@ -96,16 +94,15 @@
       "columns": [
         {
           "name": "id",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "autoIncrement": true,
-          "comment": "主キー。注文ID。"
+          "comment": "主キー。注文ID。ID001のような固定長(5文字)の文字列。"
         },
         {
           "name": "customerID",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": true,
-          "comment": "外部キー。customers.id を参照。注文した顧客。"
+          "comment": "外部キー。customers.id を参照。注文した顧客。C0001のような固定長(5文字)の文字列。"
         },
         {
           "name": "注文日",
@@ -162,22 +159,21 @@
       "columns": [
         {
           "name": "id",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "autoIncrement": true,
-          "comment": "主キー。注文詳細ID。"
+          "comment": "主キー。注文詳細ID。D0001のような固定長(5文字)の文字列。"
         },
         {
           "name": "orderID",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "comment": "外部キー。orders.id を参照。対象注文。"
+          "comment": "外部キー。orders.id を参照。対象注文。ID001のような固定長(5文字)の文字列。"
         },
         {
           "name": "productID",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "comment": "外部キー。products.id を参照。注文した商品。"
+          "comment": "外部キー。products.id を参照。注文した商品。P0001のような固定長(5文字)の文字列。"
         },
         {
           "name": "数量",

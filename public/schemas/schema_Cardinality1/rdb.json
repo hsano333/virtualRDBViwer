@@ -9,10 +9,9 @@
       "columns": [
         {
           "name": "社員ID",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "autoIncrement": true,
-          "comment": "主キー。社員ID。"
+          "comment": "主キー。社員ID。E0001のような固定長(5文字)の文字列。"
         },
         {
           "name": "氏名",
@@ -31,16 +30,15 @@
       "columns": [
         {
           "name": "社員証ID",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "autoIncrement": true,
-          "comment": "主キー。社員証ID。"
+          "comment": "主キー。社員証ID。CD001のような固定長(5文字)の文字列。"
         },
         {
           "name": "社員ID",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "comment": "外部キー。社員.社員ID を参照。社員証を持つ社員。"
+          "comment": "外部キー。社員.社員ID を参照。社員証を持つ社員。E0001のような固定長(5文字)の文字列。"
         },
         {
           "name": "発行日",

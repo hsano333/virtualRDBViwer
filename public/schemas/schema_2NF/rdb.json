@@ -11,15 +11,15 @@
       "columns": [
         {
           "name": "注文ID",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "comment": "主キー。注文ID。"
+          "comment": "主キー。注文ID。ID001のような固定長(5文字)の文字列。"
         },
         {
           "name": "顧客ID",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "comment": "顧客ID。注文を上げた顧客。"
+          "comment": "顧客ID。K0001のような固定長(5文字)の文字列。注文を上げた顧客。"
         },
         {
           "name": "顧客名",
@@ -49,7 +49,7 @@
       "columns": [
         {
           "name": "注文ID",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
           "comment": "複合主キーの一要素。注文ID。"
         },
@@ -92,13 +92,13 @@
       "columns": [
         {
           "name": "注文ID",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "comment": "複合主キーの一要素。注文ID。1つの注文に複数の商品持てるため重複する。"
+          "comment": "複合主キーの一要素。注文ID。ID001のような固定長(5文字)の文字列。1つの注文に複数の商品持てるため重複する。"
         },
         {
           "name": "顧客ID",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
           "comment": "顧客ID。注文IDのみに依存する。"
         },

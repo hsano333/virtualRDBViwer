@@ -9,10 +9,9 @@
       "columns": [
         {
           "name": "id",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "autoIncrement": true,
-          "comment": "主キー。会員ID。"
+          "comment": "主キー。会員ID。A0001のような固定長(5文字)の文字列。"
         },
         {
           "name": "氏名",
@@ -56,10 +55,9 @@
       "columns": [
         {
           "name": "id",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "autoIncrement": true,
-          "comment": "主キー。区分ID。"
+          "comment": "主キー。区分ID。C0001のような固定長(5文字)の文字列。"
         },
         {
           "name": "区分名",
@@ -84,22 +82,21 @@
       "columns": [
         {
           "name": "id",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "autoIncrement": true,
-          "comment": "主キー。注文ID。"
+          "comment": "主キー。注文ID。ID001のような固定長(5文字)の文字列。"
         },
         {
           "name": "アカウントID",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
           "comment": "外部キー。accounts.id を参照。注文をした会員。"
         },
         {
           "name": "商品ID",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "comment": "外部キー。products.id を参照。注文した商品。"
+          "comment": "外部キー。products.id を参照。注文した商品。P0001のような固定長(5文字)の文字列。"
         },
         {
           "name": "注文日",
@@ -152,10 +149,9 @@
       "columns": [
         {
           "name": "id",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "autoIncrement": true,
-          "comment": "主キー。商品ID。"
+          "comment": "主キー。商品ID。P0001のような固定長(5文字)の文字列。"
         },
         {
           "name": "商品名",
@@ -165,7 +161,7 @@
         },
         {
           "name": "区分",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
           "comment": "外部キー。categories.id を参照。商品の区分。"
         },

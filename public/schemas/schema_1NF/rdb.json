@@ -9,9 +9,9 @@
       "columns": [
         {
           "name": "注文ID",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "comment": "注文ID。複合主キーの一要素。"
+          "comment": "注文ID。複合主キーの一要素。ID001のような固定長(5文字)の文字列。"
         },
         {
           "name": "顧客名",
@@ -48,9 +48,9 @@
       "columns": [
         {
           "name": "注文ID",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "comment": "注文ID。繰返し群のため単独の主キーに不能。"
+          "comment": "注文ID。ID001のような固定長(5文字)の文字列。繰返し群のため単独の主キーに不能。"
         },
         {
           "name": "顧客名",

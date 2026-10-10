@@ -9,10 +9,9 @@
       "columns": [
         {
           "name": "id",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "autoIncrement": true,
-          "comment": "主キー。支店ID。"
+          "comment": "主キー。支店ID。S0001のような固定長(5文字)の文字列。"
         },
         {
           "name": "支店名",
@@ -49,10 +48,9 @@
       "columns": [
         {
           "name": "id",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "autoIncrement": true,
-          "comment": "主キー。区分ID。"
+          "comment": "主キー。区分ID。C0001のような固定長(5文字)の文字列。"
         },
         {
           "name": "区分名",
@@ -77,10 +75,9 @@
       "columns": [
         {
           "name": "id",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "autoIncrement": true,
-          "comment": "主キー。社員ID。"
+          "comment": "主キー。社員ID。E0001のような固定長(5文字)の文字列。"
         },
         {
           "name": "氏名",
@@ -102,7 +99,7 @@
         },
         {
           "name": "支店ID",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
           "comment": "外部キー。stores.id を参照。所属支店。"
         }
@@ -132,10 +129,9 @@
       "columns": [
         {
           "name": "id",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
-          "autoIncrement": true,
-          "comment": "主キー。商品ID。"
+          "comment": "主キー。商品ID。P0001のような固定長(5文字)の文字列。"
         },
         {
           "name": "商品名",
@@ -151,13 +147,13 @@
         },
         {
           "name": "区分ID",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
           "comment": "外部キー。categories.id を参照。商品の区分。"
         },
         {
           "name": "支店ID",
-          "type": "INTEGER",
+          "type": "TEXT(5)",
           "nullable": false,
           "comment": "外部キー。stores.id を参照。商品を扱う支店。"
         },
